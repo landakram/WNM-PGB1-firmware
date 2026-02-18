@@ -60,17 +60,8 @@ wnm_rtaudio_init (unsigned int sample_rate, unsigned int frames)
 {
   RtAudio *audio = NULL;
 
-  try
-    {
-      std::cout << "Trying to open API:" << API_NAMES.at (api);
-      audio = new RtAudio (api);
-    }
-  catch (RtAudioError &error)
-    {
-      // Handle the exception here
-      error.printMessage ();
-      return 1;
-    }
+  std::cout << "Trying to open API:" << API_NAMES.at (api);
+  audio = new RtAudio (api);
 
   if (audio == NULL)
     {
@@ -94,17 +85,19 @@ wnm_rtaudio_init (unsigned int sample_rate, unsigned int frames)
   RtAudio::StreamOptions *options = new RtAudio::StreamOptions ();
 
   options->flags |= RTAUDIO_SCHEDULE_REALTIME;
-  try
+  RtAudioErrorType err = audio->openStream (outParam, NULL, RTAUDIO_SINT16,
+                                            sample_rate, &bufsize,
+                                            rtaudio_callback, NULL);
+  if (err != RTAUDIO_NO_ERROR)
     {
-      audio->openStream (outParam, NULL, RTAUDIO_SINT16, sample_rate, &bufsize,
-                         rtaudio_callback, NULL);
-
-      audio->startStream ();
+      std::cerr << audio->getErrorText ();
+      return 1;
     }
-  catch (RtAudioError &error)
+
+  err = audio->startStream ();
+  if (err != RTAUDIO_NO_ERROR)
     {
-      // Handle the exception here
-      error.printMessage ();
+      std::cerr << audio->getErrorText ();
       return 1;
     }
 
