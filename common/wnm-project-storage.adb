@@ -198,6 +198,13 @@ package body WNM.Project.Storage is
                                               (Step.Duration'Enum_Rep));
                               end if;
 
+                           when Tie =>
+                              if Step.Tie /= Default_Step.Tie then
+                                 Output.Push (Set);
+                                 Output.Push
+                                   (Out_UInt (if Step.Tie then 1 else 0));
+                              end if;
+
                            when Velo =>
                               if Step.Velo /= Default_Step.Velo then
                                  Output.Push (Set);
@@ -988,6 +995,9 @@ package body WNM.Project.Storage is
                end;
 
             when Duration     => Read (Input, Step.Duration);
+            when Tie          =>
+               Read (Input, Val);
+               Step.Tie := Val /= 0;
             when Velo         => Read (Input, Step.Velo);
             when Repeat       => Read (Input, Step.Repeat);
             when Repeat_Rate  => Read (Input, Step.Repeat_Rate);

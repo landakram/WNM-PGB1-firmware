@@ -94,11 +94,12 @@ package WNM.Project is
           when OO_55      => "5/5");
 
    type Note_Duration is (N_32nd, N_16th, N_8th,
-                          Quarter, Half, Whole, Double);
+                          Quarter, Half, Whole, Double, Hold);
 
    function Img (D : Note_Duration) return String
    is (case D is
           when Double  => "Double",
+          when Hold    => "Hold",
           when Whole   => "Whole",
           when Half    => "Half",
           when Quarter => "Quarter",
@@ -168,6 +169,8 @@ package WNM.Project is
                       return String;
    function Duration (Step : Sequencer_Steps := Editing_Step)
                       return Note_Duration;
+   function Tie (Step : Sequencer_Steps := Editing_Step)
+                 return Boolean;
    function Velocity (Step : Sequencer_Steps := Editing_Step)
                       return MIDI.MIDI_Data;
    function CC_Enabled (Step : Sequencer_Steps := Editing_Step;
@@ -187,6 +190,7 @@ package WNM.Project is
    type Step_Settings is (Condition,
                           Note,
                           Duration,
+                          Tie,
                           Velo,
                           Repeat,
                           Repeat_Rate,
@@ -201,15 +205,16 @@ package WNM.Project is
    for Step_Settings use (Condition    => 0,
                           Note         => 1,
                           Duration     => 2,
-                          Velo         => 3,
-                          Repeat       => 4,
-                          Repeat_Rate  => 5,
-                          CC_A         => 6,
-                          CC_B         => 7,
-                          CC_C         => 8,
-                          CC_D         => 9,
-                          Note_Mode    => 10,
-                          Octave_Shift => 11);
+                          Tie          => 3,
+                          Velo         => 4,
+                          Repeat       => 5,
+                          Repeat_Rate  => 6,
+                          CC_A         => 7,
+                          CC_B         => 8,
+                          CC_C         => 9,
+                          CC_D         => 10,
+                          Note_Mode    => 11,
+                          Octave_Shift => 12);
 
    subtype User_Step_Settings is Step_Settings range Condition .. CC_D;
 
@@ -763,6 +768,7 @@ private
       Note      : MIDI.MIDI_Key;
       Oct       : Octave_Offset;
       Duration  : Note_Duration;
+      Tie       : Boolean;
       Velo      : MIDI.MIDI_Data;
       CC_Ena    : CC_Ena_Array;
       CC_Val    : CC_Val_Array;
@@ -777,6 +783,7 @@ private
       Note => MIDI.C4,
       Oct => 0,
       Duration => N_16th,
+      Tie => False,
       Velo => MIDI.MIDI_Data'Last,
       CC_Ena => (others => False),
       CC_Val => (others => 0));

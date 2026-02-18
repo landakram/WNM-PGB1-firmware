@@ -109,4 +109,20 @@ package body WNM.Note_Off_Sequencer is
       end loop;
    end Update;
 
+   -----------
+   -- Clear --
+   -----------
+
+   procedure Clear is
+   begin
+      for Target in MIDI_Target loop
+         for Chan in MIDI.MIDI_Channel loop
+            for Index in Event_Index loop
+               Events (Target, Chan, Index).Key := 0;
+               Events (Target, Chan, Index).Expiration := 0;
+            end loop;
+         end loop;
+      end loop;
+   end Clear;
+
 end WNM.Note_Off_Sequencer;

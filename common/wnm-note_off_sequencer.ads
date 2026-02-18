@@ -36,6 +36,8 @@ package WNM.Note_Off_Sequencer is
 
    procedure Update (Now : Time.Time_Microseconds);
 
+   procedure Clear;
+
 private
 
    Notes_Per_Track : constant := 8;

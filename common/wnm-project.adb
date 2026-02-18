@@ -290,6 +290,14 @@ package body WNM.Project is
                       return Note_Duration
    is (G_Project.Steps (Editing_Track)(Editing_Pattern)(Step).Duration);
 
+   ---------
+   -- Tie --
+   ---------
+
+   function Tie (Step : Sequencer_Steps := Editing_Step)
+                 return Boolean
+   is (G_Project.Steps (Editing_Track)(Editing_Pattern)(Step).Tie);
+
    --------------
    -- Velocity --
    --------------
@@ -659,6 +667,8 @@ package body WNM.Project is
          when Condition    => Set (Step.Trig, V);
          when Note         => Note_Set (Editing_Step, V);
          when Duration     => Set (Step.Duration, V);
+         when Tie          =>
+            Step.Tie := V > 0.5;
          when Velo         => Set (Step.Velo, V);
          when Repeat       => Set (Step.Repeat, V);
          when Repeat_Rate  => Set (Step.Repeat_Rate, V);
@@ -690,6 +700,7 @@ package body WNM.Project is
          when Condition    => Next (Step.Trig);
          when Note         => Note_Next (Editing_Step);
          when Duration     => Next (Step.Duration);
+         when Tie          => Step.Tie := not Step.Tie;
          when Velo         => Next (Step.Velo);
          when Repeat       => Next (Step.Repeat);
          when Repeat_Rate  => Next (Step.Repeat_Rate);
@@ -715,6 +726,7 @@ package body WNM.Project is
          when Condition    => Prev (Step.Trig);
          when Note         => Note_Prev (Editing_Step);
          when Duration     => Prev (Step.Duration);
+         when Tie          => Step.Tie := not Step.Tie;
          when Velo         => Prev (Step.Velo);
          when Repeat       => Prev (Step.Repeat);
          when Repeat_Rate  => Prev (Step.Repeat_Rate);
@@ -740,6 +752,7 @@ package body WNM.Project is
          when Condition    => Next_Fast (Step.Trig);
          when Note         => Note_Next (Editing_Step);
          when Duration     => Next_Fast (Step.Duration);
+         when Tie          => Step.Tie := not Step.Tie;
          when Velo         => Next_Fast (Step.Velo);
          when Repeat       => Next_Fast (Step.Repeat);
          when Repeat_Rate  => Next_Fast (Step.Repeat_Rate);
@@ -766,6 +779,7 @@ package body WNM.Project is
          when Condition    => Prev_Fast (Step.Trig);
          when Note         => Note_Prev (Editing_Step);
          when Duration     => Prev_Fast (Step.Duration);
+         when Tie          => Step.Tie := not Step.Tie;
          when Velo         => Prev_Fast (Step.Velo);
          when Repeat       => Prev_Fast (Step.Repeat);
          when Repeat_Rate  => Prev_Fast (Step.Repeat_Rate);

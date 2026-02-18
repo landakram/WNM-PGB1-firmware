@@ -39,10 +39,26 @@ with HAL;                   use HAL;
 
 package body WNM.Project.Step_Sequencer is
 
+   use type WNM.Chord_Settings.Chord_Index_Range;
+   use type MIDI.MIDI_Key;
+
    G_Keyboard_Octave : Octave_Offset := 0;
 
    Pattern_Counter : array (Tracks, Patterns) of UInt32;
    --  Count how many times a pattern has played
+
+   type Held_Kind is (None, Single, Chord);
+
+   type Held_State is record
+      Kind : Held_Kind := None;
+      Key : MIDI.MIDI_Key := 0;
+      Chord : WNM.Chord_Settings.Chord_Notes := (others => 0);
+      Chord_Last : WNM.Chord_Settings.Chord_Index_Range :=
+        WNM.Chord_Settings.Chord_Index_Range'First;
+      Expire_At : Time.Time_Microseconds := 0;
+   end record;
+
+   Held_Notes : array (Tracks) of Held_State := (others => <>);
 
    procedure Process_Step (Track   : Tracks;
                            Pattern : Patterns;
@@ -104,6 +120,128 @@ package body WNM.Project.Step_Sequencer is
       end if;
       return Result;
    end Offset;
+
+   -----------------------
+   -- Track_Target_Chan --
+   -----------------------
+
+   procedure Track_Target_Chan (T      : Tracks;
+                                Target : out MIDI_Target;
+                                Chan   : out MIDI.MIDI_Channel) is
+   begin
+      if Mode (T) = MIDI_Mode then
+         Target := External;
+         Chan := MIDI_Chan (T);
+      else
+         Target := Internal;
+         Chan := Voice_MIDI_Chan (Mode (T));
+      end if;
+   end Track_Target_Chan;
+
+   ----------------------------
+   -- Gate_Settings_Enabled --
+   ----------------------------
+
+   function Gate_Settings_Enabled (T : Tracks) return Boolean
+   is (case Mode (T) is
+          when Reverb_Mode | Drive_Mode | Bitcrush_Mode => False,
+          when others => True);
+
+   -----------------
+   -- Note_Off_At --
+   -----------------
+
+   function Note_Off_At (Note_On_Time : Time.Time_Microseconds;
+                         Duration     : Time.Time_Microseconds;
+                         Hold_Mode    : Boolean)
+                         return Time.Time_Microseconds
+   is (if Hold_Mode then Time.Time_Microseconds'Last
+       else Note_On_Time + Duration);
+
+   -----------------------
+   -- Duration_For_Off --
+   -----------------------
+
+   function Duration_For_Off (Note_On_Time : Time.Time_Microseconds;
+                              Duration     : Time.Time_Microseconds;
+                              Hold_Mode    : Boolean)
+                              return Time.Time_Microseconds
+   is (if Hold_Mode then Time.Time_Microseconds'Last - Note_On_Time
+       else Duration);
+
+   -----------------
+   -- Held_Active --
+   -----------------
+
+   function Held_Active (T : Tracks; Now : Time.Time_Microseconds)
+                         return Boolean
+   is (Held_Notes (T).Kind /= None and then Held_Notes (T).Expire_At > Now);
+
+   -------------------
+   -- Send_Note_Off --
+   -------------------
+
+   procedure Send_Note_Off (T   : Tracks;
+                            Key : MIDI.MIDI_Key) is
+      Target : MIDI_Target;
+      Chan   : MIDI.MIDI_Channel;
+   begin
+      Track_Target_Chan (T, Target, Chan);
+
+      case Target is
+         when External =>
+            WNM_HAL.Send_External
+              ((MIDI.Note_Off, Chan, Key, 0));
+         when Internal =>
+            WNM.Coproc.Push_To_Synth
+              ((WNM.Coproc.MIDI_Event,
+               (MIDI.Note_Off, Chan, Key, 0)));
+      end case;
+   end Send_Note_Off;
+
+   --------------------
+   -- Release_Held --
+   --------------------
+
+   procedure Release_Held (T : Tracks) is
+      use WNM.Chord_Settings;
+      Held : Held_State renames Held_Notes (T);
+   begin
+      case Held.Kind is
+         when None =>
+            null;
+         when Single =>
+            Send_Note_Off (T, Held.Key);
+         when Chord =>
+            for X in Held.Chord'First .. Held.Chord_Last loop
+               Send_Note_Off (T, Held.Chord (X));
+            end loop;
+      end case;
+
+      Held_Notes (T) := (others => <>);
+   end Release_Held;
+
+   --------------------
+   -- Chord_Equals --
+   --------------------
+
+   function Chord_Equals
+     (A, B : WNM.Chord_Settings.Chord_Notes;
+      Last_A, Last_B : WNM.Chord_Settings.Chord_Index_Range)
+      return Boolean is
+   begin
+      if Last_A /= Last_B then
+         return False;
+      end if;
+
+      for X in A'First .. Last_A loop
+         if A (X) /= B (X) then
+            return False;
+         end if;
+      end loop;
+
+      return True;
+   end Chord_Equals;
 
    -------------
    -- Playing --
@@ -247,21 +385,26 @@ package body WNM.Project.Step_Sequencer is
                         Now         : Time.Time_Microseconds;
                         Shuffle     : Time.Time_Microseconds;
                         Duration    : Time.Time_Microseconds;
-                        Repeat_Span : Time.Time_Microseconds)
+                        Repeat_Span : Time.Time_Microseconds;
+                        Hold_Mode   : Boolean)
    is
       Start_Time : Time.Time_Microseconds := Now;
+      Use_Duration : Time.Time_Microseconds;
    begin
 
       if Shuffle = 0 then
-         Play_Now (Now, T, Key, Velo, Duration);
+         Use_Duration := Duration_For_Off (Now, Duration, Hold_Mode);
+         Play_Now (Now, T, Key, Velo, Use_Duration);
       else
          Start_Time := Start_Time + Shuffle;
-         Play_Later (T, Start_Time, Key, Velo, Duration);
+         Use_Duration := Duration_For_Off (Start_Time, Duration, Hold_Mode);
+         Play_Later (T, Start_Time, Key, Velo, Use_Duration);
       end if;
 
       for X in 1 .. Rep loop
          Start_Time := Start_Time + Repeat_Span;
-         Play_Later (T, Start_Time, Key, Velo, Duration);
+         Use_Duration := Duration_For_Off (Start_Time, Duration, Hold_Mode);
+         Play_Later (T, Start_Time, Key, Velo, Use_Duration);
       end loop;
 
    end Play_Note;
@@ -277,24 +420,29 @@ package body WNM.Project.Step_Sequencer is
                        Now         : Time.Time_Microseconds;
                        Shuffle     : Time.Time_Microseconds;
                        Duration    : Time.Time_Microseconds;
-                       Repeat_Span : Time.Time_Microseconds)
+                       Repeat_Span : Time.Time_Microseconds;
+                       Hold_Mode   : Boolean)
    is
       Start_Time : Time.Time_Microseconds := Now;
       Key : MIDI.MIDI_Key := Offset (Arpeggiator.Next_Note (T), Oct);
+      Use_Duration : Time.Time_Microseconds;
    begin
 
       if Shuffle = 0 then
-         Play_Now (Now, T, Key, Velo, Duration);
+         Use_Duration := Duration_For_Off (Now, Duration, Hold_Mode);
+         Play_Now (Now, T, Key, Velo, Use_Duration);
       else
          Start_Time := Start_Time + Shuffle;
-         Play_Later (T, Start_Time, Key, Velo, Duration);
+         Use_Duration := Duration_For_Off (Start_Time, Duration, Hold_Mode);
+         Play_Later (T, Start_Time, Key, Velo, Use_Duration);
       end if;
 
       for X in 1 .. Rep loop
          Start_Time := Start_Time + Repeat_Span;
          Key := Arpeggiator.Next_Note (T);
 
-         Play_Later (T, Start_Time, Key, Velo, Duration);
+         Use_Duration := Duration_For_Off (Start_Time, Duration, Hold_Mode);
+         Play_Later (T, Start_Time, Key, Velo, Use_Duration);
       end loop;
 
    end Play_Arp;
@@ -312,10 +460,12 @@ package body WNM.Project.Step_Sequencer is
                          Now         : Time.Time_Microseconds;
                          Shuffle     : Time.Time_Microseconds;
                          Duration    : Time.Time_Microseconds;
-                         Repeat_Span : Time.Time_Microseconds)
+                         Repeat_Span : Time.Time_Microseconds;
+                         Hold_Mode   : Boolean)
    is
       Start_Time : Time.Time_Microseconds := Now;
       Offset_Chord : WNM.Chord_Settings.Chord_Notes;
+      Use_Duration : Time.Time_Microseconds;
    begin
       --  Put_Line ("Play_Chord: " &
       --              Key_Img (Chord (0)) &
@@ -329,12 +479,14 @@ package body WNM.Project.Step_Sequencer is
 
       if Shuffle = 0 then
          for X in Chord'First .. Last_Note loop
-            Play_Now (Now, T, Offset_Chord (X), Velo, Duration);
+            Use_Duration := Duration_For_Off (Now, Duration, Hold_Mode);
+            Play_Now (Now, T, Offset_Chord (X), Velo, Use_Duration);
          end loop;
       else
          Start_Time := Start_Time + Shuffle;
          for X in Chord'First .. Last_Note loop
-            Play_Later (T, Start_Time, Offset_Chord (X), Velo, Duration);
+            Use_Duration := Duration_For_Off (Start_Time, Duration, Hold_Mode);
+            Play_Later (T, Start_Time, Offset_Chord (X), Velo, Use_Duration);
          end loop;
       end if;
 
@@ -342,7 +494,8 @@ package body WNM.Project.Step_Sequencer is
          Start_Time := Start_Time + Repeat_Span;
 
          for X in Chord'First .. Last_Note loop
-            Play_Later (T, Start_Time, Offset_Chord (X), Velo, Duration);
+            Use_Duration := Duration_For_Off (Start_Time, Duration, Hold_Mode);
+            Play_Later (T, Start_Time, Offset_Chord (X), Velo, Use_Duration);
          end loop;
       end loop;
    end Play_Chord;
@@ -368,6 +521,7 @@ package body WNM.Project.Step_Sequencer is
         (case Step.Duration
          is
             when Double  => Ms_Per_Beat * 8,
+            when Hold    => Ms_Per_Beat * 8,
             when Whole   => Ms_Per_Beat * 4,
             when Half    => Ms_Per_Beat * 2,
             when Quarter => Ms_Per_Beat,
@@ -403,39 +557,153 @@ package body WNM.Project.Step_Sequencer is
          else 0);
 
       Octave : constant Octave_Offset := Add_Sat (Step.Oct, Track.Offset);
+      Gate_Enabled : constant Boolean := Gate_Settings_Enabled (T);
+      Hold_Mode : constant Boolean :=
+        Gate_Enabled
+        and then Step.Duration = Hold
+        and then Step.Note_Mode /= Arp;
+
+      Tie_Mode : constant Boolean :=
+        Gate_Enabled
+        and then Step.Tie
+        and then Step.Note_Mode /= Arp;
+
    begin
 
       Process_CC_Values (P, T, S);
 
       case Step.Note_Mode is
          when Note =>
-            Play_Note (T, Offset (Step.Note, Octave),
-                       Step.Velo, Step.Repeat,
-                       Now, Shuffle, Repeat_Duration, Repeat_Span);
+            declare
+               Key : constant MIDI.MIDI_Key := Offset (Step.Note, Octave);
+               Expiration : Time.Time_Microseconds;
+               Target : MIDI_Target;
+               Chan   : MIDI.MIDI_Channel;
+            begin
+               if Tie_Mode and then Held_Active (T, Now)
+                 and then Held_Notes (T).Kind = Single
+                 and then Held_Notes (T).Key = Key
+               then
+                  Expiration := Note_Off_At (Now, Repeat_Duration, Hold_Mode);
+                  Track_Target_Chan (T, Target, Chan);
+                  WNM.Note_Off_Sequencer.Note_Off
+                    (Target, Chan, Key, Expiration);
+                  Held_Notes (T).Expire_At := Expiration;
+               else
+                  if Hold_Mode and then Held_Notes (T).Kind /= None then
+                     Release_Held (T);
+                  end if;
+
+                  Play_Note (T, Key,
+                             Step.Velo, Step.Repeat,
+                             Now, Shuffle, Repeat_Duration, Repeat_Span,
+                             Hold_Mode);
+
+                  if Gate_Enabled then
+                     Held_Notes (T).Kind := Single;
+                     Held_Notes (T).Key := Key;
+                     Held_Notes (T).Expire_At :=
+                       Note_Off_At (Now, Repeat_Duration, Hold_Mode);
+                  end if;
+               end if;
+            end;
 
          when Note_In_Chord =>
 
-            Play_Note (T,
-                       Offset
-                         (Current_Chord (Chord_Index_Range (Step.Note)),
-                          Octave),
-                       Step.Velo, Step.Repeat,
-                       Now, Shuffle, Repeat_Duration, Repeat_Span);
+            declare
+               Key : constant MIDI.MIDI_Key :=
+                 Offset
+                   (Current_Chord (Chord_Index_Range (Step.Note)),
+                    Octave);
+               Expiration : Time.Time_Microseconds;
+               Target : MIDI_Target;
+               Chan   : MIDI.MIDI_Channel;
+            begin
+               if Tie_Mode and then Held_Active (T, Now)
+                 and then Held_Notes (T).Kind = Single
+                 and then Held_Notes (T).Key = Key
+               then
+                  Expiration := Note_Off_At (Now, Repeat_Duration, Hold_Mode);
+                  Track_Target_Chan (T, Target, Chan);
+                  WNM.Note_Off_Sequencer.Note_Off
+                    (Target, Chan, Key, Expiration);
+                  Held_Notes (T).Expire_At := Expiration;
+               else
+                  if Hold_Mode and then Held_Notes (T).Kind /= None then
+                     Release_Held (T);
+                  end if;
+
+                  Play_Note (T, Key,
+                             Step.Velo, Step.Repeat,
+                             Now, Shuffle, Repeat_Duration, Repeat_Span,
+                             Hold_Mode);
+
+                  if Gate_Enabled then
+                     Held_Notes (T).Kind := Single;
+                     Held_Notes (T).Key := Key;
+                     Held_Notes (T).Expire_At :=
+                       Note_Off_At (Now, Repeat_Duration, Hold_Mode);
+                  end if;
+               end if;
+            end;
 
          when Arp =>
 
             Play_Arp (T,
                       Step.Velo, Octave, Step.Repeat,
-                      Now, Shuffle, Repeat_Duration, Repeat_Span);
+                      Now, Shuffle, Repeat_Duration, Repeat_Span,
+                      Hold_Mode);
 
          when Chord =>
+            declare
+               Last_Note : constant Chord_Index_Range :=
+                 G_Project.Tracks (T).Notes_Per_Chord;
+               Offset_Chord : Chord_Notes;
+               Expiration : Time.Time_Microseconds;
+               Target : MIDI_Target;
+               Chan   : MIDI.MIDI_Channel;
+            begin
+               for X in Offset_Chord'First .. Last_Note loop
+                  Offset_Chord (X) := Offset (Current_Chord (X), Octave);
+               end loop;
 
-            Play_Chord
-              (T, Current_Chord,
-               G_Project.Tracks (T).Notes_Per_Chord,
-               Octave,
-               Step.Velo, Step.Repeat,
-               Now, Shuffle, Repeat_Duration, Repeat_Span);
+               if Tie_Mode and then Held_Active (T, Now)
+                 and then Held_Notes (T).Kind = Chord
+                 and then Chord_Equals
+                   (Held_Notes (T).Chord,
+                    Offset_Chord,
+                    Held_Notes (T).Chord_Last,
+                    Last_Note)
+               then
+                  Expiration := Note_Off_At (Now, Repeat_Duration, Hold_Mode);
+                  Track_Target_Chan (T, Target, Chan);
+                  for X in Offset_Chord'First .. Last_Note loop
+                     WNM.Note_Off_Sequencer.Note_Off
+                       (Target, Chan, Offset_Chord (X), Expiration);
+                  end loop;
+                  Held_Notes (T).Expire_At := Expiration;
+               else
+                  if Hold_Mode and then Held_Notes (T).Kind /= None then
+                     Release_Held (T);
+                  end if;
+
+                  Play_Chord
+                    (T, Current_Chord,
+                     Last_Note,
+                     Octave,
+                     Step.Velo, Step.Repeat,
+                     Now, Shuffle, Repeat_Duration, Repeat_Span,
+                     Hold_Mode);
+
+                  if Gate_Enabled then
+                     Held_Notes (T).Kind := Chord;
+                     Held_Notes (T).Chord := Offset_Chord;
+                     Held_Notes (T).Chord_Last := Last_Note;
+                     Held_Notes (T).Expire_At :=
+                       Note_Off_At (Now, Repeat_Duration, Hold_Mode);
+                  end if;
+               end if;
+            end;
       end case;
 
    end Play_Step;
@@ -861,7 +1129,8 @@ package body WNM.Project.Step_Sequencer is
                      Now         => Time.Clock,
                      Shuffle     => 0,
                      Duration    => Microseconds_Per_Beat,
-                     Repeat_Span => 0);
+                     Repeat_Span => 0,
+                     Hold_Mode   => False);
       else
          Play_Now (Time.Clock,
                    T,
@@ -901,6 +1170,11 @@ package body WNM.Project.Step_Sequencer is
       Playing := False;
       G_Roll_State := Off;
       G_Auto_Fill_State := Off;
+
+      for T in Tracks loop
+         Release_Held (T);
+      end loop;
+      WNM.Note_Off_Sequencer.Clear;
    end Song_Stop_Callback;
 
    ----------------------------

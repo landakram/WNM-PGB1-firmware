@@ -48,6 +48,7 @@ package body WNM.GUI.Menu.Step_Settings is
           when Project.Condition => Condition,
           when Project.Note => Note,
           when Project.Duration => Note,
+          when Project.Tie => Note,
           when Project.Velo => Note,
           when Project.Repeat => Repeat,
           when Project.Repeat_Rate => Repeat,
@@ -84,6 +85,8 @@ package body WNM.GUI.Menu.Step_Settings is
                   Draw_Title (Project.Img (Project.Note_Mode), "(press A)");
                when Project.Duration =>
                   Draw_Title ("Duration", "");
+               when Project.Tie =>
+                  Draw_Title ("Tie", "");
                when Project.Velo =>
                   Draw_Title ("Velocity", "");
                when others =>
@@ -91,16 +94,21 @@ package body WNM.GUI.Menu.Step_Settings is
                   --  raise Program_Error;
             end case;
 
-            Draw_Value (Project.Note_Img (Step),
-                        Selected => Sub = Project.Note);
+            if Sub = Project.Tie then
+               Draw_Value ((if Project.Tie (Step) then "On" else "Off"),
+                           Selected => True);
+            else
+               Draw_Value (Project.Note_Img (Step),
+                           Selected => Sub = Project.Note);
 
-            Draw_Duration (Project.Duration (Step),
-                           Sub = Project.Duration);
+               Draw_Duration (Project.Duration (Step),
+                              Sub = Project.Duration);
 
-            Draw_CC_Value (Id => D,
-                           Value => Project.Velocity (Step),
-                           Label =>  "VEL",
-                           Selected => Sub = Velo);
+               Draw_CC_Value (Id => D,
+                              Value => Project.Velocity (Step),
+                              Label =>  "VEL",
+                              Selected => Sub = Velo);
+            end if;
 
          when Repeat =>
             case Sub is

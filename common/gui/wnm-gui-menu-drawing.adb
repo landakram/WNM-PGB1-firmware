@@ -397,6 +397,10 @@ package body WNM.GUI.Menu.Drawing is
             (Str_X + Str_Pix_Len, Select_Line_Y));
       end if;
 
+      if D = Hold then
+         return;
+      end if;
+
       if D = Double then
          for Cnt in 0 .. 4 loop
             --  X     X
