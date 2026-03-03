@@ -56,9 +56,29 @@ package body WNM.Synth is
    Bass_B     : aliased Tresses.Voices.Macro.Macro_Buffers
      with Import, Address => Shared_Buffers.Shared_Buffer
        (Shared_Buffers.Bass_Synth_Offset)'Address;
+   Lead2_B    : aliased Tresses.Voices.Macro.Macro_Buffers
+     with Import, Address => Shared_Buffers.Shared_Buffer
+       (Shared_Buffers.Macro2_Synth_Offset)'Address;
+   Lead3_B    : aliased Tresses.Voices.Macro.Macro_Buffers
+     with Import, Address => Shared_Buffers.Shared_Buffer
+       (Shared_Buffers.Macro3_Synth_Offset)'Address;
+   Lead4_B    : aliased Tresses.Voices.Macro.Macro_Buffers
+     with Import, Address => Shared_Buffers.Shared_Buffer
+       (Shared_Buffers.Macro4_Synth_Offset)'Address;
+   Lead5_B    : aliased Tresses.Voices.Macro.Macro_Buffers
+     with Import, Address => Shared_Buffers.Shared_Buffer
+       (Shared_Buffers.Macro5_Synth_Offset)'Address;
 
    Lead : aliased Tresses.Voices.Macro.Instance (Lead_B'Access);
    Bass : aliased Tresses.Voices.Macro.Instance (Bass_B'Access);
+   Lead2 : aliased Tresses.Voices.Macro.Instance (Lead2_B'Access);
+   Lead3 : aliased Tresses.Voices.Macro.Instance (Lead3_B'Access);
+   Lead4 : aliased Tresses.Voices.Macro.Instance (Lead4_B'Access);
+   Lead5 : aliased Tresses.Voices.Macro.Instance (Lead5_B'Access);
+   pragma Linker_Section (Lead2, ".scratch_x");
+   pragma Linker_Section (Lead3, ".scratch_x");
+   pragma Linker_Section (Lead4, ".scratch_x");
+   pragma Linker_Section (Lead5, ".scratch_x");
 
    pragma Compile_Time_Error
      (Lead'Size > Shared_Buffers.Lead_Synth_Byte_Size * 8,
@@ -67,6 +87,22 @@ package body WNM.Synth is
    pragma Compile_Time_Error
      (Bass'Size > Shared_Buffers.Bass_Synth_Byte_Size * 8,
       "Invalid shared buffer size for bass synth");
+
+   pragma Compile_Time_Error
+     (Lead2'Size > Shared_Buffers.Macro2_Synth_Byte_Size * 8,
+      "Invalid shared buffer size for Lead2 synth");
+
+   pragma Compile_Time_Error
+     (Lead3'Size > Shared_Buffers.Macro3_Synth_Byte_Size * 8,
+      "Invalid shared buffer size for Lead3 synth");
+
+   pragma Compile_Time_Error
+     (Lead4'Size > Shared_Buffers.Macro4_Synth_Byte_Size * 8,
+      "Invalid shared buffer size for Lead4 synth");
+
+   pragma Compile_Time_Error
+     (Lead5'Size > Shared_Buffers.Macro5_Synth_Byte_Size * 8,
+      "Invalid shared buffer size for Lead5 synth");
 
    Sample_Rec_Playback :
    WNM.Voices.Sampler_Voice.Sample_Rec_Playback_Instance;
@@ -195,7 +231,7 @@ package body WNM.Synth is
           when others => Voices.Chord_Voice.Custom_Waveform);
 
    subtype Tresses_Channels
-     is MIDI.MIDI_Channel range Kick_Channel .. Bitcrusher_Channel;
+     is MIDI.MIDI_Channel range Kick_Channel .. Lead5_Channel;
 
    Synth_Voices : constant array (Tresses_Channels) of
      Voice_Access :=
@@ -209,7 +245,11 @@ package body WNM.Synth is
         Chord_Channel      => Chord'Access,
         Reverb_Channel     => WNM.Mixer.FX_Reverb'Access,
         Drive_Channel      => WNM.Mixer.FX_Drive'Access,
-        Bitcrusher_Channel => WNM.Mixer.FX_Bitcrush'Access);
+        Bitcrusher_Channel => WNM.Mixer.FX_Bitcrush'Access,
+        Lead2_Channel      => Lead2'Access,
+        Lead3_Channel      => Lead3'Access,
+        Lead4_Channel      => Lead4'Access,
+        Lead5_Channel      => Lead5'Access);
 
    LFO_Targets : array (Tresses_Channels) of MIDI.MIDI_Data :=
      (others => Voice_Pan_CC);
@@ -574,6 +614,22 @@ package body WNM.Synth is
                                  Bass.Set_Engine
                                    (Lead_Engines
                                       (Msg.MIDI_Evt.Controller_Value));
+                              when Lead2_Channel =>
+                                 Lead2.Set_Engine
+                                   (Lead_Engines
+                                      (Msg.MIDI_Evt.Controller_Value));
+                              when Lead3_Channel =>
+                                 Lead3.Set_Engine
+                                   (Lead_Engines
+                                      (Msg.MIDI_Evt.Controller_Value));
+                              when Lead4_Channel =>
+                                 Lead4.Set_Engine
+                                   (Lead_Engines
+                                      (Msg.MIDI_Evt.Controller_Value));
+                              when Lead5_Channel =>
+                                 Lead5.Set_Engine
+                                   (Lead_Engines
+                                      (Msg.MIDI_Evt.Controller_Value));
                               when Snare_Channel =>
                                  TS.Set_Engine
                                    (Snare_Engines
@@ -789,6 +845,26 @@ package body WNM.Synth is
          Bass.Render (Buffer, Aux_Buffer);
          Mix (Bass_Channel);
          Stop (Synth_Perf (Bass_Channel));
+
+         Start (Synth_Perf (Lead2_Channel));
+         Lead2.Render (Buffer, Aux_Buffer);
+         Mix (Lead2_Channel);
+         Stop (Synth_Perf (Lead2_Channel));
+
+         Start (Synth_Perf (Lead3_Channel));
+         Lead3.Render (Buffer, Aux_Buffer);
+         Mix (Lead3_Channel);
+         Stop (Synth_Perf (Lead3_Channel));
+
+         Start (Synth_Perf (Lead4_Channel));
+         Lead4.Render (Buffer, Aux_Buffer);
+         Mix (Lead4_Channel);
+         Stop (Synth_Perf (Lead4_Channel));
+
+         Start (Synth_Perf (Lead5_Channel));
+         Lead5.Render (Buffer, Aux_Buffer);
+         Mix (Lead5_Channel);
+         Stop (Synth_Perf (Lead5_Channel));
 
          Start (Synth_Perf (Chord_Channel));
          Chord.Render (Buffer);
@@ -1070,4 +1146,12 @@ begin
    Lead.Set_Engine (Voice_Saw_Swarm);
    Lead.Set_User_Waveform (User_Waveform'Access);
    Bass.Set_User_Waveform (User_Waveform'Access);
+   Lead2.Set_Engine (Voice_Saw_Swarm);
+   Lead3.Set_Engine (Voice_Saw_Swarm);
+   Lead4.Set_Engine (Voice_Saw_Swarm);
+   Lead5.Set_Engine (Voice_Saw_Swarm);
+   Lead2.Set_User_Waveform (User_Waveform'Access);
+   Lead3.Set_User_Waveform (User_Waveform'Access);
+   Lead4.Set_User_Waveform (User_Waveform'Access);
+   Lead5.Set_User_Waveform (User_Waveform'Access);
 end WNM.Synth;

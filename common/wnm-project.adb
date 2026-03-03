@@ -325,9 +325,8 @@ package body WNM.Project is
       use MIDI;
    begin
       case Mode (T) is
-         when Lead_Mode =>
-            return (MIDI_Data'First, Synth.Lead_Engine_Last);
-         when Bass_Mode =>
+         when Lead_Mode | Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
+              Bass_Mode =>
             return (MIDI_Data'First, Synth.Lead_Engine_Last);
          when Kick_Mode =>
             return (MIDI_Data'First, Synth.Kick_Engine_Last);
@@ -365,6 +364,7 @@ package body WNM.Project is
    begin
       case Mode (Editing_Track) is
          when MIDI_Mode | Kick_Mode | Snare_Mode | Hihat_Mode | Lead_Mode |
+              Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
               Chord_Mode | Bass_Mode | Reverb_Mode |
               Drive_Mode | Bitcrush_Mode =>
             return CC_Value (Step, Id)'Img;
@@ -540,8 +540,6 @@ package body WNM.Project is
       if Mode (T) in Sample1_Mode | Sample2_Mode
         and then
           Id = A
-        and then
-          not G_Project.Tracks (T).MIDI_Enabled
       then
          --  Special case for sample section
          Sample_Id_Next (CC);
@@ -567,8 +565,6 @@ package body WNM.Project is
       if Mode (T) in Sample1_Mode | Sample2_Mode
         and then
           Id = A
-        and then
-          not G_Project.Tracks (T).MIDI_Enabled
       then
          null;
       else
@@ -589,8 +585,6 @@ package body WNM.Project is
       if Mode (T) in Sample1_Mode | Sample2_Mode
         and then
           Id = A
-        and then
-          not G_Project.Tracks (T).MIDI_Enabled
       then
          --  Special case for sample section
          Sample_Id_Prev (CC);
@@ -786,25 +780,45 @@ package body WNM.Project is
 
    function Mode (T : Tracks := Editing_Track) return Track_Mode_Kind is
    begin
-      if G_Project.Tracks (T).MIDI_Enabled then
-         return MIDI_Mode;
-      else
-         return (case T is
-                    when Kick_Track     => Kick_Mode,
-                    when Snare_Track    => Snare_Mode,
-                    when Cymbal_Track   => Hihat_Mode,
-                    when Bass_Track     => Bass_Mode,
-                    when Lead_Track     => Lead_Mode,
-                    when Sample1_Track  => Sample1_Mode,
-                    when Sample2_Track  => Sample2_Mode,
-                    --  when Speech_Track   => Speech_Mode,
-                    when Chord_Track    => Chord_Mode,
-                    when Reverb_Track   => Reverb_Mode,
-                    when Drive_Track    => Drive_Mode,
-                    when Bitcrush_Track => Bitcrush_Mode,
-                    when others         => MIDI_Mode);
-      end if;
+      return G_Project.Tracks (T).Mode;
    end Mode;
+
+   function Is_Bass_Engine (Engine : MIDI.MIDI_Data) return Boolean is
+      use MIDI;
+   begin
+      return Engine in 5 | 6 | 7 | 21;
+   end Is_Bass_Engine;
+
+   function Is_Track_Mode_Allowed (T : Tracks; M : Track_Mode_Kind)
+                                   return Boolean is
+   begin
+      if T in 12 .. 16 then
+         return True;
+      else
+         return M not in Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode;
+      end if;
+   end Is_Track_Mode_Allowed;
+
+   ----------------------------
+   -- Default_Mode_For_Track --
+   ----------------------------
+
+   function Default_Mode_For_Track (T : Tracks) return Track_Mode_Kind is
+   begin
+      return (case T is
+                 when Kick_Track     => Kick_Mode,
+                 when Snare_Track    => Snare_Mode,
+                 when Cymbal_Track   => Hihat_Mode,
+                 when Bass_Track     => Bass_Mode,
+                 when Lead_Track     => Lead_Mode,
+                 when Sample1_Track  => Sample1_Mode,
+                 when Sample2_Track  => Sample2_Mode,
+                 when Chord_Track    => Chord_Mode,
+                 when Reverb_Track   => Reverb_Mode,
+                 when Drive_Track    => Drive_Mode,
+                 when Bitcrush_Track => Bitcrush_Mode,
+                 when others         => MIDI_Mode);
+   end Default_Mode_For_Track;
 
    ---------------
    -- MIDI_Chan --
@@ -818,9 +832,21 @@ package body WNM.Project is
    ----------------
 
    function Track_Name (T : Tracks := Editing_Track) return String
-   is (case Mode (T) is
-          when MIDI_Mode => "MIDI" & MIDI_Chan (T)'Img,
-          when others    => Img (Mode (T)));
+   is
+   begin
+      case Mode (T) is
+         when MIDI_Mode =>
+            return "MIDI" & MIDI_Chan (T)'Img;
+         when Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode =>
+            if Is_Bass_Engine (Selected_Engine (T)) then
+               return "Bass " & Img (Mode (T))(Img (Mode (T))'Last);
+            else
+               return Img (Mode (T));
+            end if;
+         when others =>
+            return Img (Mode (T));
+      end case;
+   end Track_Name;
 
    ------------------
    -- Track_Volume --
@@ -977,7 +1003,8 @@ package body WNM.Project is
             Utils.Copy_Str (Synth.Chord_Param_Label (Tresses_Id), Result);
             return Result;
 
-         when Lead_Mode | Bass_Mode =>
+         when Lead_Mode | Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
+              Bass_Mode =>
             Utils.Copy_Str (Synth.Lead_Param_Label (Selected_Engine (T),
                                                     Tresses_Id),
                             Result);
@@ -1037,7 +1064,8 @@ package body WNM.Project is
          when Chord_Mode =>
             return Synth.Chord_Param_Short_Label (Tresses_Id);
 
-         when Lead_Mode | Bass_Mode =>
+         when Lead_Mode | Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
+              Bass_Mode =>
             return Synth.Lead_Param_Short_Label (Selected_Engine (T),
                                                  Tresses_Id);
 
@@ -1078,7 +1106,8 @@ package body WNM.Project is
    is
    begin
       case Mode (T) is
-         when Lead_Mode | Bass_Mode =>
+         when Lead_Mode | Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
+              Bass_Mode =>
             return Synth.Lead_Engine_Img (Selected_Engine (T));
          when Kick_Mode =>
             return Synth.Kick_Engine_Img (Selected_Engine (T));
@@ -1317,11 +1346,16 @@ package body WNM.Project is
                   V : WNM_HAL.Touch_Value)
    is
       Track : Track_Rec renames G_Project.Tracks (T);
+      Old_Mode : constant Track_Mode_Kind := Track.Mode;
    begin
       case S is
-         when Track_Mode      => Set (Track.MIDI_Enabled, V);
-            --  Switching from MIDI to synth, update all settings
-            if not Track.MIDI_Enabled then
+         when Track_Mode      =>
+            Set (Track.Mode, V);
+            if not Is_Track_Mode_Allowed (T, Track.Mode) then
+               Track.Mode := Old_Mode;
+            elsif Track.Mode in Synth_Track_Mode_Kind
+              and then Track.Mode /= Old_Mode
+            then
                Synchronize_Synth_Settings (T);
             end if;
 
@@ -1362,12 +1396,17 @@ package body WNM.Project is
    procedure Next_Value (T : Tracks; S : User_Track_Settings)
    is
       Track : Track_Rec renames G_Project.Tracks (T);
+      Old_Mode : constant Track_Mode_Kind := Track.Mode;
    begin
       case S is
          when Track_Mode      =>
-            Next (Track.MIDI_Enabled);
-            --  Switching from MIDI to synth, update all settings
-            if not Track.MIDI_Enabled then
+            loop
+               Next (Track.Mode);
+               exit when Is_Track_Mode_Allowed (T, Track.Mode);
+            end loop;
+            if Track.Mode in Synth_Track_Mode_Kind
+              and then Track.Mode /= Old_Mode
+            then
                Synchronize_Synth_Settings (T);
             end if;
 
@@ -1415,12 +1454,17 @@ package body WNM.Project is
 
    procedure Prev_Value (T : Tracks; S : User_Track_Settings) is
       Track : Track_Rec renames G_Project.Tracks (T);
+      Old_Mode : constant Track_Mode_Kind := Track.Mode;
    begin
       case S is
          when Track_Mode      =>
-            Prev (Track.MIDI_Enabled);
-            --  Switching from MIDI to synth, update all settings
-            if not Track.MIDI_Enabled then
+            loop
+               Prev (Track.Mode);
+               exit when Is_Track_Mode_Allowed (T, Track.Mode);
+            end loop;
+            if Track.Mode in Synth_Track_Mode_Kind
+              and then Track.Mode /= Old_Mode
+            then
                Synchronize_Synth_Settings (T);
             end if;
 
@@ -1467,12 +1511,17 @@ package body WNM.Project is
    procedure Next_Value_Fast (S : User_Track_Settings) is
       T : constant Tracks := Editing_Track;
       Track : Track_Rec renames G_Project.Tracks (T);
+      Old_Mode : constant Track_Mode_Kind := Track.Mode;
    begin
       case S is
          when Track_Mode      =>
-            Next_Fast (Track.MIDI_Enabled);
-            --  Switching from MIDI to synth, update all settings
-            if not Track.MIDI_Enabled then
+            loop
+               Next_Fast (Track.Mode);
+               exit when Is_Track_Mode_Allowed (T, Track.Mode);
+            end loop;
+            if Track.Mode in Synth_Track_Mode_Kind
+              and then Track.Mode /= Old_Mode
+            then
                Synchronize_Synth_Settings (T);
             end if;
 
@@ -1520,12 +1569,17 @@ package body WNM.Project is
    procedure Prev_Value_Fast (S : User_Track_Settings) is
       T : constant Tracks := Editing_Track;
       Track : Track_Rec renames G_Project.Tracks (T);
+      Old_Mode : constant Track_Mode_Kind := Track.Mode;
    begin
       case S is
          when Track_Mode      =>
-            Prev_Fast (Track.MIDI_Enabled);
-            --  Switching from MIDI to synth, update all settings
-            if not Track.MIDI_Enabled then
+            loop
+               Prev_Fast (Track.Mode);
+               exit when Is_Track_Mode_Allowed (T, Track.Mode);
+            end loop;
+            if Track.Mode in Synth_Track_Mode_Kind
+              and then Track.Mode /= Old_Mode
+            then
                Synchronize_Synth_Settings (T);
             end if;
 
@@ -2423,6 +2477,7 @@ package body WNM.Project is
    procedure Set_Track_Defaults (Tracks : out Track_Arr) is
       Default_Kick_Track : constant Track_Rec :=
         (Default_Track with delta
+         Mode => Kick_Mode,
          Engine => 3,
          Offset => -4,
          CC => ((0, 63, "CC0              "),
@@ -2432,7 +2487,8 @@ package body WNM.Project is
                ));
 
       Default_Snare_Track : constant Track_Rec :=
-        (Default_Track with delta Offset => -1,
+        (Default_Track with delta Mode => Snare_Mode,
+         Offset => -1,
          CC => ((0, 40, "CC0              "),
                 (1, 35, "CC1              "),
                 (2, 50, "CC2              "),
@@ -2440,7 +2496,8 @@ package body WNM.Project is
                ));
 
       Default_Cymbal_Track : constant Track_Rec :=
-        (Default_Track with delta Engine => 1,
+        (Default_Track with delta Mode => Hihat_Mode,
+         Engine => 1,
          CC => ((0, 127, "CC0              "),
                 (1, 100, "CC1              "),
                 (2, 29, "CC2              "),
@@ -2448,7 +2505,8 @@ package body WNM.Project is
                ));
 
       Default_Bass_Track : constant Track_Rec :=
-        (Default_Track with delta Engine => 7,
+        (Default_Track with delta Mode => Bass_Mode,
+         Engine => 7,
          Offset => -2,
          FX => Reverb,
          CC => ((0, 63, "CC0              "),
@@ -2458,7 +2516,8 @@ package body WNM.Project is
                ));
 
       Default_Lead_Track : constant Track_Rec :=
-        (Default_Track with delta Engine => 0,
+        (Default_Track with delta Mode => Lead_Mode,
+         Engine => 0,
          FX => Reverb,
          CC => ((0, 60, "CC0              "),
                 (1, 40, "CC1              "),
@@ -2467,28 +2526,32 @@ package body WNM.Project is
                ));
 
       Default_Sample1_Track : constant Track_Rec :=
-        (Default_Track with delta CC => ((0, 0, "CC0              "),
+        (Default_Track with delta Mode => Sample1_Mode,
+         CC => ((0, 0, "CC0              "),
                                          (1, 0, "CC1              "),
                                          (2, 0, "CC2              "),
                                          (3, 127, "CC3              ")
                                         ));
 
       Default_Sample2_Track : constant Track_Rec :=
-        (Default_Track with delta CC => ((0, 4, "CC0              "),
+        (Default_Track with delta Mode => Sample2_Mode,
+         CC => ((0, 4, "CC0              "),
                                          (1, 0, "CC1              "),
                                          (2, 0, "CC2              "),
                                          (3, 127, "CC3              ")
                                         ));
 
       Default_Chord_Track : constant Track_Rec :=
-        (Default_Track with delta CC => ((0, 0, "CC0              "),
+        (Default_Track with delta Mode => Chord_Mode,
+         CC => ((0, 0, "CC0              "),
                                          (1, 10, "CC1              "),
                                          (2, 10, "CC2              "),
                                          (3, 63, "CC3              ")
                                         ));
 
       Default_Bitcrush_Track : constant Track_Rec :=
-        (Default_Track with delta CC => ((0, 63, "CC0              "),
+        (Default_Track with delta Mode => Bitcrush_Mode,
+         CC => ((0, 63, "CC0              "),
                                          (1, 103, "CC1              "),
                                          (2, 63, "CC2              "),
                                          (3, 119, "CC3              ")
@@ -2503,14 +2566,21 @@ package body WNM.Project is
       Tracks (Chord_Track)    := Default_Chord_Track;
       Tracks (Sample1_Track)  := Default_Sample1_Track;
       Tracks (Sample2_Track)  := Default_Sample2_Track;
-      Tracks (9)              := Default_Track;
-      Tracks (10)             := Default_Track;
+      Tracks (9)              :=
+        (Default_Track with delta Mode => Reverb_Mode);
+      Tracks (10)             :=
+        (Default_Track with delta Mode => Drive_Mode);
       Tracks (Bitcrush_Track) := Default_Bitcrush_Track;
-      Tracks (12)             := Default_Track;
-      Tracks (13)             := Default_Track;
-      Tracks (14)             := Default_Track;
-      Tracks (15)             := Default_Track;
-      Tracks (16)             := Default_Track;
+      Tracks (12)             :=
+        (Default_Track with delta Mode => MIDI_Mode);
+      Tracks (13)             :=
+        (Default_Track with delta Mode => MIDI_Mode);
+      Tracks (14)             :=
+        (Default_Track with delta Mode => MIDI_Mode);
+      Tracks (15)             :=
+        (Default_Track with delta Mode => MIDI_Mode);
+      Tracks (16)             :=
+        (Default_Track with delta Mode => MIDI_Mode);
    end Set_Track_Defaults;
 
 begin

@@ -34,12 +34,36 @@ package body WNM.Shared_Buffers is
         is Natural range
           Bass_Synth_Offset .. Bass_Synth_Offset + Bass_Synth_Byte_Size - 1;
 
+      subtype Macro2_Range
+        is Natural range
+          Macro2_Synth_Offset ..
+          Macro2_Synth_Offset + Macro2_Synth_Byte_Size - 1;
+
+      subtype Macro3_Range
+        is Natural range
+          Macro3_Synth_Offset ..
+          Macro3_Synth_Offset + Macro3_Synth_Byte_Size - 1;
+
+      subtype Macro4_Range
+        is Natural range
+          Macro4_Synth_Offset ..
+          Macro4_Synth_Offset + Macro4_Synth_Byte_Size - 1;
+
+      subtype Macro5_Range
+        is Natural range
+          Macro5_Synth_Offset ..
+          Macro5_Synth_Offset + Macro5_Synth_Byte_Size - 1;
+
       subtype Reverb_Range
         is Natural range
           Reverb_Offset .. Reverb_Offset + Reverb_Byte_Size - 1;
    begin
       Shared_Buffer (Lead_Range) := (others => 0);
       Shared_Buffer (Bass_Range) := (others => 0);
+      Shared_Buffer (Macro2_Range) := (others => 0);
+      Shared_Buffer (Macro3_Range) := (others => 0);
+      Shared_Buffer (Macro4_Range) := (others => 0);
+      Shared_Buffer (Macro5_Range) := (others => 0);
       Shared_Buffer (Reverb_Range) := (others => 0);
    end Clear_Synth_Buffers;
 

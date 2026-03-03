@@ -98,7 +98,9 @@ with WNM.File_System; use WNM.File_System;
 
 package body WNM.Project.Storage is
 
-   Format_Version : constant := 1;
+   Format_Version : constant := 2;
+
+   File_Format_Version : In_UInt := Format_Version;
 
    ----------------
    -- Save_Steps --
@@ -298,7 +300,7 @@ package body WNM.Project.Storage is
 
                case Set is
                   when Track_Mode =>
-                     Output.Push (Out_UInt (Track.MIDI_Enabled'Enum_Rep));
+                     Output.Push (Out_UInt (Track.Mode'Enum_Rep));
 
                   when Engine =>
                      Output.Push (Out_UInt (Track.Engine));
@@ -620,6 +622,7 @@ package body WNM.Project.Storage is
       procedure To_Track_Settings is new Convert_To_Enum (Track_Settings);
 
       procedure Read is new File_In.Read_Gen_Enum (Boolean);
+      procedure Read_Track_Mode is new File_In.Read_Gen_Enum (Track_Mode_Kind);
       procedure Read is new File_In.Read_Gen_Int (Tracks);
       procedure Read is new File_In.Read_Gen_Int (Audio_Volume);
       procedure Read is new File_In.Read_Gen_Int (Audio_Pan);
@@ -665,7 +668,21 @@ package body WNM.Project.Storage is
             exit when not Success;
 
             case S is
-               when Track_Mode  => Read (Input, Track.MIDI_Enabled);
+               when Track_Mode  =>
+                  if File_Format_Version = 1 then
+                     declare
+                        Midi_Enabled : Boolean := False;
+                     begin
+                        Read (Input, Midi_Enabled);
+                        if Midi_Enabled then
+                           Track.Mode := MIDI_Mode;
+                        else
+                           Track.Mode := Default_Mode_For_Track (T_Id);
+                        end if;
+                     end;
+                  else
+                     Read_Track_Mode (Input, Track.Mode);
+                  end if;
                when Engine      => Read (Input, Track.Engine);
                when Volume      => Read (Input, Track.Volume);
                when Pan         => Read (Input, Track.Pan);
@@ -1182,6 +1199,7 @@ package body WNM.Project.Storage is
       --  The first data in a project file is a version number for the format.
       --  Right now it should always be 1 and we don't use this information.
       Input.Read (Version);
+      File_Format_Version := Version;
 
       --  Set default gains in case there is no mixer section saved
       G_Project.Gains := Default_Gains;

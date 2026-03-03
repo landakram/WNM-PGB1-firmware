@@ -226,7 +226,8 @@ package WNM.Project is
    type Track_Mode_Kind is (MIDI_Mode, Sample1_Mode, Sample2_Mode,
                             Kick_Mode, Snare_Mode, Hihat_Mode,
                             Bass_Mode, Lead_Mode, Chord_Mode, Reverb_Mode,
-                            Drive_Mode, Bitcrush_Mode);
+                            Drive_Mode, Bitcrush_Mode,
+                            Lead2_Mode, Lead3_Mode, Lead4_Mode, Lead5_Mode);
 
    function Img (M : Track_Mode_Kind) return String
    is (case M is
@@ -241,10 +242,14 @@ package WNM.Project is
           when Chord_Mode    => "Chord",
           when Reverb_Mode   => "FX Reverb",
           when Drive_Mode    => "FX Overdrive",
-          when Bitcrush_Mode => "FX Bitcrusher");
+          when Bitcrush_Mode => "FX Bitcrusher",
+          when Lead2_Mode    => "Lead 2",
+          when Lead3_Mode    => "Lead 3",
+          when Lead4_Mode    => "Lead 4",
+          when Lead5_Mode    => "Lead 5");
 
    subtype Synth_Track_Mode_Kind is
-     Track_Mode_Kind range Sample1_Mode .. Bitcrush_Mode;
+     Track_Mode_Kind range Sample1_Mode .. Lead5_Mode;
 
    function Voice_MIDI_Chan (Voice : Synth_Track_Mode_Kind)
                              return MIDI.MIDI_Channel
@@ -256,6 +261,10 @@ package WNM.Project is
           when Hihat_Mode    => Synth.Hihat_Channel,
           when Bass_Mode     => Synth.Bass_Channel,
           when Lead_Mode     => Synth.Lead_Channel,
+          when Lead2_Mode    => Synth.Lead2_Channel,
+          when Lead3_Mode    => Synth.Lead3_Channel,
+          when Lead4_Mode    => Synth.Lead4_Channel,
+          when Lead5_Mode    => Synth.Lead5_Channel,
           when Chord_Mode    => Synth.Chord_Channel,
           when Reverb_Mode   => Synth.Reverb_Channel,
           when Drive_Mode    => Synth.Drive_Channel,
@@ -287,6 +296,7 @@ package WNM.Project is
 
    -- Track Getters --
    function Mode (T : Tracks := Editing_Track) return Track_Mode_Kind;
+   function Default_Mode_For_Track (T : Tracks) return Track_Mode_Kind;
    function MIDI_Chan (T : Tracks := Editing_Track) return MIDI.MIDI_Channel;
    function Track_Name (T : Tracks := Editing_Track) return String;
    function Track_Volume (T : Tracks := Editing_Track) return Audio_Volume;
@@ -728,6 +738,11 @@ private
                                          Wrap => True);
    use Tracks_Next;
 
+   package Track_Mode_Kind_Next is new Enum_Next
+     (T    => Track_Mode_Kind,
+      Wrap => True);
+   use Track_Mode_Kind_Next;
+
    package Duration_In_Steps_Next is new Enum_Next
      (T    => WNM.Duration_In_Steps,
       Wrap => False);
@@ -818,7 +833,7 @@ private
    type CC_Setting_Array is array (CC_Id) of CC_Setting;
 
    type Track_Rec is record
-      MIDI_Enabled : Boolean := False;
+      Mode : Track_Mode_Kind := MIDI_Mode;
       Chan : MIDI.MIDI_Channel := 0;
       Volume : Audio_Volume := Init_Volume;
       Pan : Audio_Pan := Init_Pan;
@@ -856,7 +871,7 @@ private
    type Track_Arr is array (Tracks) of Track_Rec;
 
    Default_Track : constant Track_Rec :=
-     (MIDI_Enabled => False,
+     (Mode => MIDI_Mode,
       Chan => 0,
       Volume => Init_Volume,
       Pan => Init_Pan,
