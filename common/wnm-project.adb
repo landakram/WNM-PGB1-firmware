@@ -1369,11 +1369,12 @@ package body WNM.Project is
             Set (Track.Mode, V);
             if not Is_Track_Mode_Allowed (T, Track.Mode) then
                Track.Mode := Old_Mode;
-            elsif Track.Mode in Synth_Track_Mode_Kind
-              and then Track.Mode /= Old_Mode
-            then
+            elsif Track.Mode /= Old_Mode then
                Update_Extra_Channel_Active;
-               Synchronize_Synth_Settings (T);
+
+               if Track.Mode in Synth_Track_Mode_Kind then
+                  Synchronize_Synth_Settings (T);
+               end if;
             end if;
 
          when Engine          => Set (Track.Engine, V, Engine_Limits);
@@ -1421,11 +1422,12 @@ package body WNM.Project is
                Next (Track.Mode);
                exit when Is_Track_Mode_Allowed (T, Track.Mode);
             end loop;
-            if Track.Mode in Synth_Track_Mode_Kind
-              and then Track.Mode /= Old_Mode
-            then
+            if Track.Mode /= Old_Mode then
                Update_Extra_Channel_Active;
-               Synchronize_Synth_Settings (T);
+
+               if Track.Mode in Synth_Track_Mode_Kind then
+                  Synchronize_Synth_Settings (T);
+               end if;
             end if;
 
          when Engine          => Next (Track.Engine, Engine_Limits);
@@ -1480,11 +1482,12 @@ package body WNM.Project is
                Prev (Track.Mode);
                exit when Is_Track_Mode_Allowed (T, Track.Mode);
             end loop;
-            if Track.Mode in Synth_Track_Mode_Kind
-              and then Track.Mode /= Old_Mode
-            then
+            if Track.Mode /= Old_Mode then
                Update_Extra_Channel_Active;
-               Synchronize_Synth_Settings (T);
+
+               if Track.Mode in Synth_Track_Mode_Kind then
+                  Synchronize_Synth_Settings (T);
+               end if;
             end if;
 
          when Engine          => Prev (Track.Engine, Engine_Limits);
@@ -1538,11 +1541,12 @@ package body WNM.Project is
                Next_Fast (Track.Mode);
                exit when Is_Track_Mode_Allowed (T, Track.Mode);
             end loop;
-            if Track.Mode in Synth_Track_Mode_Kind
-              and then Track.Mode /= Old_Mode
-            then
+            if Track.Mode /= Old_Mode then
                Update_Extra_Channel_Active;
-               Synchronize_Synth_Settings (T);
+
+               if Track.Mode in Synth_Track_Mode_Kind then
+                  Synchronize_Synth_Settings (T);
+               end if;
             end if;
 
          when Engine          => Next_Fast (Track.Engine, Engine_Limits);
@@ -1597,11 +1601,12 @@ package body WNM.Project is
                Prev_Fast (Track.Mode);
                exit when Is_Track_Mode_Allowed (T, Track.Mode);
             end loop;
-            if Track.Mode in Synth_Track_Mode_Kind
-              and then Track.Mode /= Old_Mode
-            then
+            if Track.Mode /= Old_Mode then
                Update_Extra_Channel_Active;
-               Synchronize_Synth_Settings (T);
+
+               if Track.Mode in Synth_Track_Mode_Kind then
+                  Synchronize_Synth_Settings (T);
+               end if;
             end if;
 
          when Engine          => Prev_Fast (Track.Engine, Engine_Limits);
