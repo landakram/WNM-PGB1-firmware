@@ -37,7 +37,22 @@ package WNM.Shared_Buffers is
    Bass_Synth_Offset : constant := Lead_Synth_Offset + Lead_Synth_Byte_Size;
    Bass_Synth_Byte_Size : constant := 8_400;
 
-   Reverb_Offset : constant := Bass_Synth_Offset + Bass_Synth_Byte_Size;
+   Macro2_Synth_Offset : constant := Bass_Synth_Offset + Bass_Synth_Byte_Size;
+   Macro2_Synth_Byte_Size : constant := 8_400;
+
+   Macro3_Synth_Offset : constant :=
+     Macro2_Synth_Offset + Macro2_Synth_Byte_Size;
+   Macro3_Synth_Byte_Size : constant := 8_400;
+
+   Macro4_Synth_Offset : constant :=
+     Macro3_Synth_Offset + Macro3_Synth_Byte_Size;
+   Macro4_Synth_Byte_Size : constant := 8_400;
+
+   Macro5_Synth_Offset : constant :=
+     Macro4_Synth_Offset + Macro4_Synth_Byte_Size;
+   Macro5_Synth_Byte_Size : constant := 8_400;
+
+   Reverb_Offset : constant := Macro5_Synth_Offset + Macro5_Synth_Byte_Size;
    Reverb_Byte_Size : constant := 33_000;
 
    -- Short term sequencer --

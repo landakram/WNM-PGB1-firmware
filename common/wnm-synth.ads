@@ -47,7 +47,11 @@ package WNM.Synth is
    Reverb_Channel              : constant MIDI.MIDI_Channel := 9;
    Drive_Channel               : constant MIDI.MIDI_Channel := 10;
    Bitcrusher_Channel          : constant MIDI.MIDI_Channel := 11;
-   Sample_Rec_Playback_Channel : constant MIDI.MIDI_Channel := 13;
+   Lead2_Channel               : constant MIDI.MIDI_Channel := 12;
+   Lead3_Channel               : constant MIDI.MIDI_Channel := 13;
+   Lead4_Channel               : constant MIDI.MIDI_Channel := 14;
+   Lead5_Channel               : constant MIDI.MIDI_Channel := 15;
+   Sample_Rec_Playback_Channel : constant MIDI.MIDI_Channel := 0;
 
    subtype Sampler_Channels
      is MIDI.MIDI_Channel range Sample1_Channel .. Sample2_Channel;
