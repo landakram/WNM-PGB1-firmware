@@ -25,7 +25,8 @@ package WNM.GUI.Menu.MIDI_Settings is
 
 private
 
-   type Top_Settings is (MIDI_Misc);
+   type Top_Settings is (MIDI_Clock,
+                         USB_MIDI);
 
    function Top_Settings_Count is new Enum_Count (Top_Settings);
 

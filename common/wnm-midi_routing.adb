@@ -79,7 +79,9 @@ package body WNM.MIDI_Routing is
             end if;
 
          when USB =>
-            if Persistent.Data.USB_MIDI_Thru_USB_to_TRS then
+            if Persistent.Data.USB_MIDI_Enabled
+              and then Persistent.Data.USB_MIDI_Thru_USB_to_TRS
+            then
                WNM_HAL.Send_External (Msg);
             end if;
 

@@ -69,9 +69,11 @@ package body WNM.Tasks is
       loop
          WNM_HAL.Get_USB (Msg, Success);
          exit when not Success;
-         WNM.MIDI_Routing.Handle_Input
-           (Source => WNM.MIDI_Routing.USB,
-            Msg    => Msg);
+         if WNM.Persistent.Data.USB_MIDI_Enabled then
+            WNM.MIDI_Routing.Handle_Input
+              (Source => WNM.MIDI_Routing.USB,
+               Msg    => Msg);
+         end if;
       end loop;
    end Handle_MIDI_In;
 
