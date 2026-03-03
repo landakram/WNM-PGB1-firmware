@@ -227,8 +227,8 @@ package WNM.Project is
                             Kick_Mode, Snare_Mode, Hihat_Mode,
                             Bass_Mode, Lead_Mode, Chord_Mode, Reverb_Mode,
                             Drive_Mode, Bitcrush_Mode,
-                            Lead2_Mode, Lead3_Mode, Lead4_Mode, Lead5_Mode,
-                            Bass2_Mode, Bass3_Mode, Bass4_Mode, Bass5_Mode);
+                            Macro1_Mode, Macro2_Mode, Macro3_Mode,
+                            Macro4_Mode);
 
    function Img (M : Track_Mode_Kind) return String
    is (case M is
@@ -244,17 +244,13 @@ package WNM.Project is
           when Reverb_Mode   => "FX Reverb",
           when Drive_Mode    => "FX Overdrive",
           when Bitcrush_Mode => "FX Bitcrusher",
-          when Lead2_Mode    => "Lead 2",
-          when Lead3_Mode    => "Lead 3",
-          when Lead4_Mode    => "Lead 4",
-          when Lead5_Mode    => "Lead 5",
-          when Bass2_Mode    => "Bass 2",
-          when Bass3_Mode    => "Bass 3",
-          when Bass4_Mode    => "Bass 4",
-          when Bass5_Mode    => "Bass 5");
+          when Macro1_Mode   => "Macro 1",
+          when Macro2_Mode   => "Macro 2",
+          when Macro3_Mode   => "Macro 3",
+          when Macro4_Mode   => "Macro 4");
 
    subtype Synth_Track_Mode_Kind is
-     Track_Mode_Kind range Sample1_Mode .. Bass5_Mode;
+     Track_Mode_Kind range Sample1_Mode .. Macro4_Mode;
 
    function Voice_MIDI_Chan (Voice : Synth_Track_Mode_Kind)
                              return MIDI.MIDI_Channel
@@ -266,14 +262,10 @@ package WNM.Project is
           when Hihat_Mode    => Synth.Hihat_Channel,
           when Bass_Mode     => Synth.Bass_Channel,
           when Lead_Mode     => Synth.Lead_Channel,
-          when Lead2_Mode    => Synth.Lead2_Channel,
-          when Lead3_Mode    => Synth.Lead3_Channel,
-          when Lead4_Mode    => Synth.Lead4_Channel,
-          when Lead5_Mode    => Synth.Lead5_Channel,
-          when Bass2_Mode    => Synth.Lead2_Channel,
-          when Bass3_Mode    => Synth.Lead3_Channel,
-          when Bass4_Mode    => Synth.Lead4_Channel,
-          when Bass5_Mode    => Synth.Lead5_Channel,
+          when Macro1_Mode   => Synth.Lead2_Channel,
+          when Macro2_Mode   => Synth.Lead3_Channel,
+          when Macro3_Mode   => Synth.Lead4_Channel,
+          when Macro4_Mode   => Synth.Lead5_Channel,
           when Chord_Mode    => Synth.Chord_Channel,
           when Reverb_Mode   => Synth.Reverb_Channel,
           when Drive_Mode    => Synth.Drive_Channel,
