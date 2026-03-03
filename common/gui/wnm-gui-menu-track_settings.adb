@@ -35,12 +35,15 @@ package body WNM.GUI.Menu.Track_Settings is
 
    Valid_Top_Settings : array (Track_Mode_Kind, Top_Settings) of
      Boolean := (others => (others => False));
+   pragma Linker_Section (Valid_Top_Settings, ".scratch_x");
 
    Top_Settings_Count_Cache : array (Track_Mode_Kind) of
      Interfaces.Integer_8 := (others => 0);
+   pragma Linker_Section (Top_Settings_Count_Cache, ".scratch_x");
 
    Top_Settings_Position_Cache : array (Track_Mode_Kind, Top_Settings) of
      Interfaces.Integer_8 := (others => (others => -1));
+   pragma Linker_Section (Top_Settings_Position_Cache, ".scratch_x");
 
    ------------
    -- To_Top --

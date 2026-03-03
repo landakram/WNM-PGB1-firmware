@@ -67,6 +67,8 @@ private
           --  Multi engines
           when Project.Lead_Mode | Project.Lead2_Mode | Project.Lead3_Mode |
                Project.Lead4_Mode | Project.Lead5_Mode | Project.Bass_Mode |
+               Project.Bass2_Mode | Project.Bass3_Mode | Project.Bass4_Mode |
+               Project.Bass5_Mode |
                Project.Kick_Mode | Project.Snare_Mode | Project.Hihat_Mode |
                Project.Chord_Mode |
                Project.Sample1_Mode | Project.Sample2_Mode =>

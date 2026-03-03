@@ -326,7 +326,7 @@ package body WNM.Project is
    begin
       case Mode (T) is
          when Lead_Mode | Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
-              Bass_Mode =>
+              Bass_Mode | Bass2_Mode | Bass3_Mode | Bass4_Mode | Bass5_Mode =>
             return (MIDI_Data'First, Synth.Lead_Engine_Last);
          when Kick_Mode =>
             return (MIDI_Data'First, Synth.Kick_Engine_Last);
@@ -365,6 +365,7 @@ package body WNM.Project is
       case Mode (Editing_Track) is
          when MIDI_Mode | Kick_Mode | Snare_Mode | Hihat_Mode | Lead_Mode |
               Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
+              Bass2_Mode | Bass3_Mode | Bass4_Mode | Bass5_Mode |
               Chord_Mode | Bass_Mode | Reverb_Mode |
               Drive_Mode | Bitcrush_Mode =>
             return CC_Value (Step, Id)'Img;
@@ -783,21 +784,42 @@ package body WNM.Project is
       return G_Project.Tracks (T).Mode;
    end Mode;
 
-   function Is_Bass_Engine (Engine : MIDI.MIDI_Data) return Boolean is
-      use MIDI;
-   begin
-      return Engine in 5 | 6 | 7 | 21;
-   end Is_Bass_Engine;
-
    function Is_Track_Mode_Allowed (T : Tracks; M : Track_Mode_Kind)
                                    return Boolean is
    begin
       if T in 12 .. 16 then
-         return True;
+         return M in MIDI_Mode | Lead2_Mode | Lead3_Mode | Lead4_Mode |
+           Lead5_Mode | Bass2_Mode | Bass3_Mode | Bass4_Mode | Bass5_Mode;
       else
-         return M not in Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode;
+         return M not in Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
+           Bass2_Mode | Bass3_Mode | Bass4_Mode | Bass5_Mode;
       end if;
    end Is_Track_Mode_Allowed;
+
+   procedure Update_Extra_Channel_Active is
+      use WNM.Synth;
+      Active : array (Lead2_Channel .. Lead5_Channel) of Boolean :=
+        (others => False);
+   begin
+      for T in Tracks loop
+         case Mode (T) is
+            when Lead2_Mode | Bass2_Mode =>
+               Active (Lead2_Channel) := True;
+            when Lead3_Mode | Bass3_Mode =>
+               Active (Lead3_Channel) := True;
+            when Lead4_Mode | Bass4_Mode =>
+               Active (Lead4_Channel) := True;
+            when Lead5_Mode | Bass5_Mode =>
+               Active (Lead5_Channel) := True;
+            when others =>
+               null;
+         end case;
+      end loop;
+
+      for Chan in Active'Range loop
+         Set_Channel_Active (Chan, Active (Chan));
+      end loop;
+   end Update_Extra_Channel_Active;
 
    ----------------------------
    -- Default_Mode_For_Track --
@@ -837,12 +859,9 @@ package body WNM.Project is
       case Mode (T) is
          when MIDI_Mode =>
             return "MIDI" & MIDI_Chan (T)'Img;
-         when Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode =>
-            if Is_Bass_Engine (Selected_Engine (T)) then
-               return "Bass " & Img (Mode (T))(Img (Mode (T))'Last);
-            else
-               return Img (Mode (T));
-            end if;
+         when Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
+              Bass2_Mode | Bass3_Mode | Bass4_Mode | Bass5_Mode =>
+            return Img (Mode (T));
          when others =>
             return Img (Mode (T));
       end case;
@@ -1004,7 +1023,7 @@ package body WNM.Project is
             return Result;
 
          when Lead_Mode | Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
-              Bass_Mode =>
+              Bass_Mode | Bass2_Mode | Bass3_Mode | Bass4_Mode | Bass5_Mode =>
             Utils.Copy_Str (Synth.Lead_Param_Label (Selected_Engine (T),
                                                     Tresses_Id),
                             Result);
@@ -1065,7 +1084,7 @@ package body WNM.Project is
             return Synth.Chord_Param_Short_Label (Tresses_Id);
 
          when Lead_Mode | Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
-              Bass_Mode =>
+              Bass_Mode | Bass2_Mode | Bass3_Mode | Bass4_Mode | Bass5_Mode =>
             return Synth.Lead_Param_Short_Label (Selected_Engine (T),
                                                  Tresses_Id);
 
@@ -1107,7 +1126,7 @@ package body WNM.Project is
    begin
       case Mode (T) is
          when Lead_Mode | Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
-              Bass_Mode =>
+              Bass_Mode | Bass2_Mode | Bass3_Mode | Bass4_Mode | Bass5_Mode =>
             return Synth.Lead_Engine_Img (Selected_Engine (T));
          when Kick_Mode =>
             return Synth.Kick_Engine_Img (Selected_Engine (T));
@@ -1356,6 +1375,7 @@ package body WNM.Project is
             elsif Track.Mode in Synth_Track_Mode_Kind
               and then Track.Mode /= Old_Mode
             then
+               Update_Extra_Channel_Active;
                Synchronize_Synth_Settings (T);
             end if;
 
@@ -1407,6 +1427,7 @@ package body WNM.Project is
             if Track.Mode in Synth_Track_Mode_Kind
               and then Track.Mode /= Old_Mode
             then
+               Update_Extra_Channel_Active;
                Synchronize_Synth_Settings (T);
             end if;
 
@@ -1465,6 +1486,7 @@ package body WNM.Project is
             if Track.Mode in Synth_Track_Mode_Kind
               and then Track.Mode /= Old_Mode
             then
+               Update_Extra_Channel_Active;
                Synchronize_Synth_Settings (T);
             end if;
 
@@ -1522,6 +1544,7 @@ package body WNM.Project is
             if Track.Mode in Synth_Track_Mode_Kind
               and then Track.Mode /= Old_Mode
             then
+               Update_Extra_Channel_Active;
                Synchronize_Synth_Settings (T);
             end if;
 
@@ -1580,6 +1603,7 @@ package body WNM.Project is
             if Track.Mode in Synth_Track_Mode_Kind
               and then Track.Mode /= Old_Mode
             then
+               Update_Extra_Channel_Active;
                Synchronize_Synth_Settings (T);
             end if;
 
@@ -2318,6 +2342,7 @@ package body WNM.Project is
       for T in Tracks loop
          Synchronize_Synth_Settings (T);
       end loop;
+      Update_Extra_Channel_Active;
    end Project_Load_Callback;
 
    -----------------
@@ -2585,4 +2610,5 @@ package body WNM.Project is
 
 begin
    Set_Track_Defaults (G_Project.Tracks);
+   Update_Extra_Channel_Active;
 end WNM.Project;

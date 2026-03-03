@@ -258,6 +258,9 @@ package body WNM.Synth is
    LFOs       : array (Tresses_Channels) of Tresses.LFO.Instance;
    LFO_Syncs  : array (Tresses_Channels) of Boolean := (others => False);
    LFO_Values : array (Tresses_Channels) of Tresses.S16;
+   Channel_Active : array (Tresses_Channels) of Boolean :=
+     (Lead2_Channel | Lead3_Channel | Lead4_Channel | Lead5_Channel => False,
+      others => True);
 
    type Voice_Parameters_Array is array (Tresses_Channels) of
      Voice_Parameters;
@@ -278,6 +281,19 @@ package body WNM.Synth is
 
    Volume_For_Chan : array (MIDI.MIDI_Channel) of WNM_HAL.Audio_Volume :=
      (others => WNM_HAL.Init_Volume);
+
+   function Is_Extra_Channel (Chan : MIDI.MIDI_Channel) return Boolean is
+   (Chan in Lead2_Channel | Lead3_Channel | Lead4_Channel | Lead5_Channel);
+
+   function Is_Channel_Active (Chan : MIDI.MIDI_Channel) return Boolean is
+     (if Chan in Tresses_Channels then Channel_Active (Chan) else True);
+
+   procedure Set_Channel_Active (Chan : MIDI.MIDI_Channel; Active : Boolean) is
+   begin
+      if Is_Extra_Channel (Chan) then
+         Channel_Active (Chan) := Active;
+      end if;
+   end Set_Channel_Active;
 
    Overall_Synth_Perf : WNM.Utils.Perf_Timer;
    Synth_Perf : array (Tresses_Channels) of WNM.Utils.Perf_Timer;
@@ -510,7 +526,9 @@ package body WNM.Synth is
                --    (Clock'Img & " - " &
                --     MIDI.Img (Msg.MIDI_Evt));
 
-               if Msg.MIDI_Evt.Chan in Synth_Voices'Range then
+               if Msg.MIDI_Evt.Chan in Synth_Voices'Range
+                 and then Is_Channel_Active (Msg.MIDI_Evt.Chan)
+               then
                   declare
                      Voice : Voice_Class renames
                        Synth_Voices (Msg.MIDI_Evt.Chan).all;
@@ -781,7 +799,9 @@ package body WNM.Synth is
 
       --  Apply LFOs
       for Chan in Tresses_Channels loop
-         if LFO_Targets (Chan) in LFO_Compatible_CC then
+         if Is_Channel_Active (Chan)
+           and then LFO_Targets (Chan) in LFO_Compatible_CC
+         then
             Out_Voice_Parameters (Chan)(LFO_Targets (Chan)) :=
               Add_Clip (Out_Voice_Parameters (Chan)(LFO_Targets (Chan)),
                         LFO_Values (Chan));
@@ -790,20 +810,22 @@ package body WNM.Synth is
 
       --  Set params
       for Chan in Tresses_Channels loop
-         Synth_Voices (Chan).Set_Param
-           (1, Out_Voice_Parameters (Chan)(Voice_Param_1_CC));
-         Synth_Voices (Chan).Set_Param
-           (2, Out_Voice_Parameters (Chan)(Voice_Param_2_CC));
-         Synth_Voices (Chan).Set_Param
-           (3, Out_Voice_Parameters (Chan)(Voice_Param_3_CC));
-         Synth_Voices (Chan).Set_Param
-           (4, Out_Voice_Parameters (Chan)(Voice_Param_4_CC));
+         if Is_Channel_Active (Chan) then
+            Synth_Voices (Chan).Set_Param
+              (1, Out_Voice_Parameters (Chan)(Voice_Param_1_CC));
+            Synth_Voices (Chan).Set_Param
+              (2, Out_Voice_Parameters (Chan)(Voice_Param_2_CC));
+            Synth_Voices (Chan).Set_Param
+              (3, Out_Voice_Parameters (Chan)(Voice_Param_3_CC));
+            Synth_Voices (Chan).Set_Param
+              (4, Out_Voice_Parameters (Chan)(Voice_Param_4_CC));
 
-         Pan_For_Chan (Chan) := To_Pan
-           (Out_Voice_Parameters (Chan)(Voice_Pan_CC));
+            Pan_For_Chan (Chan) := To_Pan
+              (Out_Voice_Parameters (Chan)(Voice_Pan_CC));
 
-         Volume_For_Chan (Chan) := To_Volume
-            (Out_Voice_Parameters (Chan)(Voice_Volume_CC));
+            Volume_For_Chan (Chan) := To_Volume
+              (Out_Voice_Parameters (Chan)(Voice_Volume_CC));
+         end if;
       end loop;
 
       --  Send the FX parameters in FX buffer
@@ -846,25 +868,33 @@ package body WNM.Synth is
          Mix (Bass_Channel);
          Stop (Synth_Perf (Bass_Channel));
 
-         Start (Synth_Perf (Lead2_Channel));
-         Lead2.Render (Buffer, Aux_Buffer);
-         Mix (Lead2_Channel);
-         Stop (Synth_Perf (Lead2_Channel));
+         if Is_Channel_Active (Lead2_Channel) then
+            Start (Synth_Perf (Lead2_Channel));
+            Lead2.Render (Buffer, Aux_Buffer);
+            Mix (Lead2_Channel);
+            Stop (Synth_Perf (Lead2_Channel));
+         end if;
 
-         Start (Synth_Perf (Lead3_Channel));
-         Lead3.Render (Buffer, Aux_Buffer);
-         Mix (Lead3_Channel);
-         Stop (Synth_Perf (Lead3_Channel));
+         if Is_Channel_Active (Lead3_Channel) then
+            Start (Synth_Perf (Lead3_Channel));
+            Lead3.Render (Buffer, Aux_Buffer);
+            Mix (Lead3_Channel);
+            Stop (Synth_Perf (Lead3_Channel));
+         end if;
 
-         Start (Synth_Perf (Lead4_Channel));
-         Lead4.Render (Buffer, Aux_Buffer);
-         Mix (Lead4_Channel);
-         Stop (Synth_Perf (Lead4_Channel));
+         if Is_Channel_Active (Lead4_Channel) then
+            Start (Synth_Perf (Lead4_Channel));
+            Lead4.Render (Buffer, Aux_Buffer);
+            Mix (Lead4_Channel);
+            Stop (Synth_Perf (Lead4_Channel));
+         end if;
 
-         Start (Synth_Perf (Lead5_Channel));
-         Lead5.Render (Buffer, Aux_Buffer);
-         Mix (Lead5_Channel);
-         Stop (Synth_Perf (Lead5_Channel));
+         if Is_Channel_Active (Lead5_Channel) then
+            Start (Synth_Perf (Lead5_Channel));
+            Lead5.Render (Buffer, Aux_Buffer);
+            Mix (Lead5_Channel);
+            Stop (Synth_Perf (Lead5_Channel));
+         end if;
 
          Start (Synth_Perf (Chord_Channel));
          Chord.Render (Buffer);
@@ -1143,9 +1173,18 @@ package body WNM.Synth is
    is (Chord.Param_Short_Label (Id));
 
 begin
+   WNM.Shared_Buffers.Clear_Synth_Buffers;
+
+   Lead.Init;
+   Bass.Init;
    Lead.Set_Engine (Voice_Saw_Swarm);
    Lead.Set_User_Waveform (User_Waveform'Access);
    Bass.Set_User_Waveform (User_Waveform'Access);
+
+   Lead2.Init;
+   Lead3.Init;
+   Lead4.Init;
+   Lead5.Init;
    Lead2.Set_Engine (Voice_Saw_Swarm);
    Lead3.Set_Engine (Voice_Saw_Swarm);
    Lead4.Set_Engine (Voice_Saw_Swarm);

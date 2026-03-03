@@ -119,6 +119,8 @@ package WNM.Synth is
    procedure Push_Copro_Event (Msg : WNM.Coproc.Message);
    procedure Process_Coproc_Events;
 
+   procedure Set_Channel_Active (Chan : MIDI.MIDI_Channel; Active : Boolean);
+
    -----------
    -- Synth --
    -----------
