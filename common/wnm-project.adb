@@ -783,12 +783,37 @@ package body WNM.Project is
       return G_Project.Tracks (T).Mode;
    end Mode;
 
+   function Is_Macro_Mode_Claimed_By_Other (T : Tracks;
+                                            M : Track_Mode_Kind)
+                                            return Boolean
+   is
+   begin
+      if M not in Macro1_Mode | Macro2_Mode | Macro3_Mode | Macro4_Mode then
+         return False;
+      end if;
+
+      for Other in Tracks loop
+         if Other /= T and then Mode (Other) = M then
+            return True;
+         end if;
+      end loop;
+
+      return False;
+   end Is_Macro_Mode_Claimed_By_Other;
+
    function Is_Track_Mode_Allowed (T : Tracks; M : Track_Mode_Kind)
                                    return Boolean is
    begin
       if T in 12 .. 16 then
-         return M in MIDI_Mode | Macro1_Mode | Macro2_Mode | Macro3_Mode |
-           Macro4_Mode;
+         if M not in MIDI_Mode | Macro1_Mode | Macro2_Mode | Macro3_Mode |
+           Macro4_Mode
+         then
+            return False;
+         elsif M in Macro1_Mode | Macro2_Mode | Macro3_Mode | Macro4_Mode then
+            return not Is_Macro_Mode_Claimed_By_Other (T, M);
+         else
+            return True;
+         end if;
       else
          return M not in Macro1_Mode | Macro2_Mode | Macro3_Mode | Macro4_Mode;
       end if;
