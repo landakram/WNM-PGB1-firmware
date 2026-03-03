@@ -227,7 +227,8 @@ package WNM.Project is
                             Kick_Mode, Snare_Mode, Hihat_Mode,
                             Bass_Mode, Lead_Mode, Chord_Mode, Reverb_Mode,
                             Drive_Mode, Bitcrush_Mode,
-                            Lead2_Mode, Lead3_Mode, Lead4_Mode, Lead5_Mode);
+                            Lead2_Mode, Lead3_Mode, Lead4_Mode, Lead5_Mode,
+                            Bass2_Mode, Bass3_Mode, Bass4_Mode, Bass5_Mode);
 
    function Img (M : Track_Mode_Kind) return String
    is (case M is
@@ -246,10 +247,14 @@ package WNM.Project is
           when Lead2_Mode    => "Lead 2",
           when Lead3_Mode    => "Lead 3",
           when Lead4_Mode    => "Lead 4",
-          when Lead5_Mode    => "Lead 5");
+          when Lead5_Mode    => "Lead 5",
+          when Bass2_Mode    => "Bass 2",
+          when Bass3_Mode    => "Bass 3",
+          when Bass4_Mode    => "Bass 4",
+          when Bass5_Mode    => "Bass 5");
 
    subtype Synth_Track_Mode_Kind is
-     Track_Mode_Kind range Sample1_Mode .. Lead5_Mode;
+     Track_Mode_Kind range Sample1_Mode .. Bass5_Mode;
 
    function Voice_MIDI_Chan (Voice : Synth_Track_Mode_Kind)
                              return MIDI.MIDI_Channel
@@ -265,6 +270,10 @@ package WNM.Project is
           when Lead3_Mode    => Synth.Lead3_Channel,
           when Lead4_Mode    => Synth.Lead4_Channel,
           when Lead5_Mode    => Synth.Lead5_Channel,
+          when Bass2_Mode    => Synth.Lead2_Channel,
+          when Bass3_Mode    => Synth.Lead3_Channel,
+          when Bass4_Mode    => Synth.Lead4_Channel,
+          when Bass5_Mode    => Synth.Lead5_Channel,
           when Chord_Mode    => Synth.Chord_Channel,
           when Reverb_Mode   => Synth.Reverb_Channel,
           when Drive_Mode    => Synth.Drive_Channel,
@@ -346,6 +355,8 @@ package WNM.Project is
                          Center   => 1,
                          Negative => 2);
    function LFO_Amp_Mode (T : Tracks := Editing_Track) return LFO_Amp_Kind;
+
+   procedure Update_Extra_Channel_Active;
 
    function CC_Value_To_Use (P : Patterns; T : Tracks; S : Sequencer_Steps;
                              Id : CC_Id)
