@@ -22,6 +22,7 @@
 with HAL; use HAL;
 
 with WNM.Coproc;
+with WNM.MIDI_Routing;
 
 package body WNM.Note_Off_Sequencer is
 
@@ -36,7 +37,7 @@ package body WNM.Note_Off_Sequencer is
    begin
       case Target is
          when External =>
-            WNM_HAL.Send_External
+            WNM.MIDI_Routing.Send_Output
               ((MIDI.Note_Off, Chan, Key, 0));
 
          when Internal =>

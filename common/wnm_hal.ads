@@ -175,6 +175,9 @@ package WNM_HAL is
    procedure Send_External (Msg : MIDI.Message);
    procedure Flush_Output;
    procedure Get_External (Msg : out MIDI.Message; Success : out Boolean);
+   procedure Send_USB (Msg : MIDI.Message);
+   procedure Get_USB (Msg : out MIDI.Message; Success : out Boolean);
+   procedure USB_Poll;
 
    -----------
    -- Power --

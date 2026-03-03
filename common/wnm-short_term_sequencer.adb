@@ -22,6 +22,7 @@
 with HAL; use HAL;
 with WNM.Coproc;
 with WNM.Note_Off_Sequencer;
+with WNM.MIDI_Routing;
 
 with WNM.Shared_Buffers;
 
@@ -216,7 +217,7 @@ package body WNM.Short_Term_Sequencer is
 
          case Node.D.Target is
             when External =>
-               WNM_HAL.Send_External
+               WNM.MIDI_Routing.Send_Output
                  ((MIDI.Note_On, Node.D.Chan, Node.D.Key, Node.D.Velocity));
 
             when Internal =>

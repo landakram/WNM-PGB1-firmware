@@ -14,6 +14,7 @@ littlefs = "~1.0.0"
 flux = "~1.0.0"
 noise_nugget_sdk = "~2.0.0"
 midi = "~1.0.0"
+usb_embedded = "~1.0.1"
 
 [build-switches]
 "*".ada_version = "ada2022"
