@@ -439,6 +439,35 @@ package body WNM_HAL is
       MIDI.Decoder.Queue.Pop (MIDI_In_Queue, Msg, Success);
    end Get_External;
 
+   --------------
+   -- Send_USB --
+   --------------
+
+   procedure Send_USB (Msg : MIDI.Message) is
+      pragma Unreferenced (Msg);
+   begin
+      null;
+   end Send_USB;
+
+   -------------
+   -- Get_USB --
+   -------------
+
+   procedure Get_USB (Msg : out MIDI.Message; Success : out Boolean) is
+      pragma Unreferenced (Msg);
+   begin
+      Success := False;
+   end Get_USB;
+
+   --------------
+   -- USB_Poll --
+   --------------
+
+   procedure USB_Poll is
+   begin
+      null;
+   end USB_Poll;
+
    ------------------------
    -- Shutdown_Requested --
    ------------------------

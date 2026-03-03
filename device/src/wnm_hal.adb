@@ -51,6 +51,13 @@ with Noise_Nugget_SDK.Screen.SSD1306;
 with Noise_Nugget_SDK.MIDI;
 with Noise_Nugget_SDK.Audio.PIO_I2S_ASM;
 
+with USB;
+with USB.Device;
+with USB.Device.MIDI;
+with MIDI.Encoder;
+with MIDI.Decoder.Queue;
+with BBqueue;
+
 with Wnm_Pgb1_Device_Config;
 with Tresses_Config;
 with GNAT.Source_Info;
@@ -175,6 +182,20 @@ package body WNM_HAL is
       DMA_TX_Trigger => RP.DMA.UART1_TX,
       TX_Pin         => 8,
       RX_Pin         => 9);
+
+   USB_MIDI_TX_Queue_Size : constant BBqueue.Count := 8;
+   USB_MIDI_RX_Queue_Size : constant BBqueue.Count := 8;
+   USB_MIDI_Decoder_Size  : constant BBqueue.Count := 8;
+
+   USB_Stack : USB.Device.USB_Device_Stack (Max_Classes => 1);
+   pragma Linker_Section (USB_Stack, ".scratch_x.usb");
+   USB_MIDI_Class : aliased USB.Device.MIDI.Default_MIDI_Class
+     (TX_Buffer_Size => USB_MIDI_TX_Queue_Size,
+      RX_Buffer_Size => USB_MIDI_RX_Queue_Size);
+   pragma Linker_Section (USB_MIDI_Class, ".scratch_x.usb");
+   USB_Initialized : Boolean := False;
+   USB_Decoder : MIDI.Decoder.Queue.Instance (USB_MIDI_Decoder_Size);
+   pragma Linker_Section (USB_Decoder, ".scratch_x.usb");
 
    procedure Last_Chance_Handler (Msg : System.Address; Line : Integer);
    pragma Export (C, Last_Chance_Handler, "__gnat_last_chance_handler");
@@ -793,6 +814,202 @@ package body WNM_HAL is
    renames External_MIDI.Get_Input;
 
    ------------------------
+   -- USB MIDI Utilities --
+   ------------------------
+
+   function USB_Event_Byte (Evt : USB.Device.MIDI.MIDI_Event;
+                            Index : Positive) return HAL.UInt8 is
+      use Interfaces;
+      Val : constant HAL.UInt32 := HAL.UInt32 (Evt);
+   begin
+      return HAL.UInt8 (Shift_Right (Val, (Index - 1) * 8) and 16#FF#);
+   end USB_Event_Byte;
+
+   function USB_Event_Length (CIN : HAL.UInt8) return Natural is
+   begin
+      case CIN is
+         when 16#2# => return 2; -- System common (2 bytes)
+         when 16#3# => return 3; -- System common (3 bytes)
+         when 16#4# => return 0; --  Ignore SysEx
+         when 16#5# => return 1; -- System common (1 byte)
+         when 16#6# | 16#7# => return 0; --  Ignore SysEx end
+         when 16#8# .. 16#B# => return 3; -- Channel voice (3 bytes)
+         when 16#C# | 16#D# => return 2; -- Program/Channel pressure
+         when 16#E# => return 2; -- Pitch bend (library expects 1 data byte)
+         when 16#F# => return 1; -- Single byte (real-time)
+         when others => return 0;
+      end case;
+   end USB_Event_Length;
+
+   function USB_CIN_For_Message (Msg : MIDI.Message) return HAL.UInt8 is
+   begin
+      case Msg.Kind is
+         when MIDI.Sys =>
+            case Msg.Cmd is
+               when MIDI.Song_Position =>
+                  return 16#3#;
+               when MIDI.Song_Select | MIDI.Bus_Select =>
+                  return 16#2#;
+               when MIDI.Tune_Request | MIDI.End_Exclusive =>
+                  return 16#5#;
+               when MIDI.Timming_Tick | MIDI.Start_Song | MIDI.Continue_Song |
+                    MIDI.Stop_Song | MIDI.Active_Sensing | MIDI.Reset =>
+                  return 16#F#;
+               when others =>
+                  return 0;
+            end case;
+
+         when MIDI.Note_Off =>
+            return 16#8#;
+         when MIDI.Note_On =>
+            return 16#9#;
+         when MIDI.Aftertouch =>
+            return 16#A#;
+         when MIDI.Continous_Controller =>
+            return 16#B#;
+         when MIDI.Patch_Change =>
+            return 16#C#;
+         when MIDI.Channel_Pressure =>
+            return 16#D#;
+         when MIDI.Pitch_Bend =>
+            return 16#E#;
+      end case;
+   end USB_CIN_For_Message;
+
+   function USB_Pack_Event (B0, B1, B2, B3 : HAL.UInt8)
+                            return USB.Device.MIDI.MIDI_Event is
+      use Interfaces;
+   begin
+      return USB.Device.MIDI.MIDI_Event
+        (HAL.UInt32 (B0)
+         or Shift_Left (HAL.UInt32 (B1), 8)
+         or Shift_Left (HAL.UInt32 (B2), 16)
+         or Shift_Left (HAL.UInt32 (B3), 24));
+   end USB_Pack_Event;
+
+   procedure USB_Decode_Event (Evt : USB.Device.MIDI.MIDI_Event) is
+      CIN : constant HAL.UInt8 := USB_Event_Byte (Evt, 1) and 16#0F#;
+      Len : constant Natural := USB_Event_Length (CIN);
+      B1  : constant HAL.UInt8 := USB_Event_Byte (Evt, 2);
+      B2  : constant HAL.UInt8 := USB_Event_Byte (Evt, 3);
+      B3  : constant HAL.UInt8 := USB_Event_Byte (Evt, 4);
+   begin
+      case Len is
+         when 1 =>
+            MIDI.Decoder.Queue.Push (USB_Decoder, B1);
+         when 2 =>
+            MIDI.Decoder.Queue.Push (USB_Decoder, B1);
+            MIDI.Decoder.Queue.Push (USB_Decoder, B2);
+         when 3 =>
+            MIDI.Decoder.Queue.Push (USB_Decoder, B1);
+            MIDI.Decoder.Queue.Push (USB_Decoder, B2);
+            MIDI.Decoder.Queue.Push (USB_Decoder, B3);
+         when others =>
+            null;
+      end case;
+   end USB_Decode_Event;
+
+   ------------------
+   -- USB_Poll --
+   ------------------
+
+   procedure USB_Poll is
+      Evt : USB.Device.MIDI.MIDI_Event;
+      Has : Boolean;
+   begin
+      if not USB_Initialized then
+         return;
+      end if;
+
+      USB_Stack.Poll;
+
+      loop
+         Has := USB_MIDI_Class.Receive (Evt);
+         exit when not Has;
+         USB_Decode_Event (Evt);
+      end loop;
+   end USB_Poll;
+
+   --------------
+   -- Send_USB --
+   --------------
+
+   procedure Send_USB (Msg : MIDI.Message) is
+      Bytes : constant HAL.UInt8_Array := MIDI.Encoder.Encode (Msg);
+      CIN   : constant HAL.UInt8 := USB_CIN_For_Message (Msg);
+      B0    : constant HAL.UInt8 := CIN; -- Cable number = 0
+      B1    : HAL.UInt8 := 0;
+      B2    : HAL.UInt8 := 0;
+      B3    : HAL.UInt8 := 0;
+   begin
+      if not USB_Initialized then
+         return;
+      end if;
+
+      if CIN = 0 then
+         return;
+      end if;
+
+      if Bytes'Length >= 1 then
+         B1 := Bytes (Bytes'First);
+      end if;
+
+      if Bytes'Length >= 2 then
+         B2 := Bytes (Bytes'First + 1);
+      end if;
+
+      if Bytes'Length >= 3 then
+         B3 := Bytes (Bytes'First + 2);
+      end if;
+
+      USB_MIDI_Class.Send (USB_Stack.Controller.all,
+                           USB_Pack_Event (B0, B1, B2, B3));
+   end Send_USB;
+
+   -------------
+   -- Get_USB --
+   -------------
+
+   procedure Get_USB (Msg : out MIDI.Message; Success : out Boolean) is
+   begin
+      MIDI.Decoder.Queue.Pop (USB_Decoder, Msg, Success);
+   end Get_USB;
+
+   --------------------
+   -- Init_USB_MIDI --
+   --------------------
+
+   procedure Init_USB_MIDI is
+      Result : USB.Device.Init_Result;
+      use type USB.Device.Init_Result;
+   begin
+      if USB_Initialized then
+         return;
+      end if;
+
+      if not USB_Stack.Register_Class (USB_MIDI_Class'Access) then
+         return;
+      end if;
+
+      USB_MIDI_Class.Set_Interface_String (USB_Stack, "PGB-1 MIDI");
+
+      Result := USB_Stack.Initialize
+        (Controller      => RP.Device.UDC'Access,
+         Manufacturer    => USB.To_USB_String ("Wee Noise Makers"),
+         Product         => USB.To_USB_String ("PGB-1"),
+         Serial_Number   => USB.To_USB_String
+           (Wnm_Pgb1_Device_Config.Crate_Version),
+         Max_Packet_Size => USB.Control_Packet_Size'Last);
+
+      if Result /= USB.Device.Ok then
+         return;
+      end if;
+
+      USB_Stack.Start;
+      USB_Initialized := True;
+   end Init_USB_MIDI;
+
+   ------------------------
    -- Shutdown_Requested --
    ------------------------
 
@@ -1132,4 +1349,6 @@ begin
    RP.ADC.Enable;
    RP.ADC.Configure (VBAT_Sense_Chan);
    RP.ADC.Set_Mode (RP.ADC.Free_Running);
+
+   Init_USB_MIDI;
 end WNM_HAL;

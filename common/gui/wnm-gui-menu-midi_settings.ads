@@ -31,7 +31,11 @@ private
 
    type Sub_Settings is
      (Clock_In,
-      Clock_Out);
+      Clock_Out,
+      USB_Enable,
+      USB_Output,
+      USB_Thru_TRS_to_USB,
+      USB_Thru_USB_to_TRS);
 
    function Sub_Settings_Count is new Enum_Count (Sub_Settings);
 

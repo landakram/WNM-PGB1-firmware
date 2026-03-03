@@ -22,6 +22,7 @@
 with MIDI; use MIDI;
 
 with WNM.Persistent;
+with WNM.MIDI_Routing;
 
 package body WNM.MIDI_Utils is
 
@@ -39,7 +40,7 @@ package body WNM.MIDI_Utils is
       --  Filter external clock events based on user settings
 
       if not Ext_Clock or else Persistent.Data.MIDI_Clock_Output then
-         WNM_HAL.Send_External (Msg);
+         WNM.MIDI_Routing.Send_Output (Msg);
       end if;
    end Filter_External_Clock;
 

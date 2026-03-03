@@ -1,6 +1,7 @@
 with "config/wnm_pgb1_device_config.gpr";
 
 with "noise_nugget_sdk.gpr";
+with "usb_embedded.gpr";
 
 project Wnm_PGB1_Device is
 

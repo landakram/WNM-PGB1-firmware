@@ -39,7 +39,11 @@ package body WNM.Persistent is
                              P_TP3_Threshold,
                              P_LED_Dim,
                              P_MIDI_Clock_Input,
-                             P_MIDI_Clock_Output);
+                             P_MIDI_Clock_Output,
+                             P_USB_MIDI_Enabled,
+                             P_USB_MIDI_Output,
+                             P_USB_MIDI_Thru_TRS_to_USB,
+                             P_USB_MIDI_Thru_USB_to_TRS);
 
    for Persistent_Token use (P_Last_Project      => 0,
                              P_Main_Volume       => 1,
@@ -53,7 +57,11 @@ package body WNM.Persistent is
                              P_TP3_Threshold     => 9,
                              P_LED_Dim           => 10,
                              P_MIDI_Clock_Input  => 11,
-                             P_MIDI_Clock_Output => 12);
+                             P_MIDI_Clock_Output => 12,
+                             P_USB_MIDI_Enabled  => 13,
+                             P_USB_MIDI_Output   => 14,
+                             P_USB_MIDI_Thru_TRS_to_USB => 15,
+                             P_USB_MIDI_Thru_USB_to_TRS => 16);
 
    ----------
    -- Save --
@@ -97,6 +105,14 @@ package body WNM.Persistent is
                Output.Push (Data.MIDI_Clock_Input);
             when P_MIDI_Clock_Output =>
                Output.Push (Data.MIDI_Clock_Output);
+            when P_USB_MIDI_Enabled =>
+               Output.Push (Data.USB_MIDI_Enabled);
+            when P_USB_MIDI_Output =>
+               Output.Push (Data.USB_MIDI_Output);
+            when P_USB_MIDI_Thru_TRS_to_USB =>
+               Output.Push (Data.USB_MIDI_Thru_TRS_to_USB);
+            when P_USB_MIDI_Thru_USB_to_TRS =>
+               Output.Push (Data.USB_MIDI_Thru_USB_to_TRS);
          end case;
 
          exit when Output.Status /= Ok;
@@ -167,6 +183,14 @@ package body WNM.Persistent is
                Input.Read (Data.MIDI_Clock_Input);
             when P_MIDI_Clock_Output =>
                Input.Read (Data.MIDI_Clock_Output);
+            when P_USB_MIDI_Enabled =>
+               Input.Read (Data.USB_MIDI_Enabled);
+            when P_USB_MIDI_Output =>
+               Input.Read (Data.USB_MIDI_Output);
+            when P_USB_MIDI_Thru_TRS_to_USB =>
+               Input.Read (Data.USB_MIDI_Thru_TRS_to_USB);
+            when P_USB_MIDI_Thru_USB_to_TRS =>
+               Input.Read (Data.USB_MIDI_Thru_USB_to_TRS);
          end case;
 
          exit when Input.Status /= Ok;

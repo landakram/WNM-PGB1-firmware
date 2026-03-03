@@ -40,6 +40,10 @@ package WNM.Persistent is
       LED_Brightness      : WNM.LEDs.Brightness;
       MIDI_Clock_Input    : Boolean;
       MIDI_Clock_Output   : Boolean;
+      USB_MIDI_Enabled        : Boolean;
+      USB_MIDI_Output         : Boolean;
+      USB_MIDI_Thru_TRS_to_USB : Boolean;
+      USB_MIDI_Thru_USB_to_TRS : Boolean;
    end record;
 
    Default : constant Persistent_Data :=
@@ -55,7 +59,11 @@ package WNM.Persistent is
       TP3_Threshold       => 730,
       LED_Brightness      => WNM.LEDs.Brightness'Last - 1,
       MIDI_Clock_Input    => True,
-      MIDI_Clock_Output   => True);
+      MIDI_Clock_Output   => True,
+      USB_MIDI_Enabled        => True,
+      USB_MIDI_Output         => True,
+      USB_MIDI_Thru_TRS_to_USB => True,
+      USB_MIDI_Thru_USB_to_TRS => True);
 
    Data : Persistent_Data := Default;
 

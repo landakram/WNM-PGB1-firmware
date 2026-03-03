@@ -21,10 +21,6 @@
 
 with WNM.GUI.Menu.Drawing; use WNM.GUI.Menu.Drawing;
 with WNM.Persistent;
-with WNM.Screen;
-
-with midi_clock_in_icon;
-with midi_clock_out_icon;
 
 package body WNM.GUI.Menu.MIDI_Settings is
 
@@ -56,31 +52,6 @@ package body WNM.GUI.Menu.MIDI_Settings is
       Sub : constant Sub_Settings := This.Current_Setting;
       Top : constant Top_Settings := To_Top (Sub);
 
-      Icon_W : constant := 19;
-      Icon_H : constant := 24;
-
-      procedure Cross (X, Y : Integer; On : Boolean) is
-      begin
-         Screen.Draw_Line ((X, Y),
-                           (X + Icon_W, Y + Icon_H),
-                           On);
-         Screen.Draw_Line ((X + 1, Y),
-                           (X + Icon_W + 1, Y + Icon_H),
-                           On);
-
-         Screen.Draw_Line ((X + Icon_W, Y),
-                           (X, Y + Icon_H),
-                           On);
-         Screen.Draw_Line ((X + Icon_W + 1, Y),
-                           (X + 1, Y + Icon_H),
-                           On);
-      end Cross;
-
-      In_Icon : constant Screen.Point :=
-        (Box_Left + Box_Width / 3 - Icon_W / 2, Title_Text_Y + 10);
-      Out_Icon : constant Screen.Point :=
-        (Box_Right - Box_Width / 3 - Icon_W / 2, In_Icon.Y);
-
    begin
       Draw_Menu_Box
         ("MIDI settings",
@@ -89,29 +60,38 @@ package body WNM.GUI.Menu.MIDI_Settings is
 
       case Top is
          when MIDI_Misc =>
-
             case This.Current_Setting is
                when Clock_In =>
                   Draw_Title ("MIDI Clock Input", "");
+                  Draw_Value ((if Persistent.Data.MIDI_Clock_Input then "On"
+                               else "Off"),
+                              Selected => True);
                when Clock_Out =>
                   Draw_Title ("MIDI Clock Output", "");
+                  Draw_Value ((if Persistent.Data.MIDI_Clock_Output then "On"
+                               else "Off"),
+                              Selected => True);
+               when USB_Enable =>
+                  Draw_Title ("USB MIDI", "");
+                  Draw_Value ((if Persistent.Data.USB_MIDI_Enabled then "On"
+                               else "Off"),
+                              Selected => True);
+               when USB_Output =>
+                  Draw_Title ("USB MIDI Output", "");
+                  Draw_Value ((if Persistent.Data.USB_MIDI_Output then "On"
+                               else "Off"),
+                              Selected => True);
+               when USB_Thru_TRS_to_USB =>
+                  Draw_Title ("TRS -> USB Thru", "");
+                  Draw_Value ((if Persistent.Data.USB_MIDI_Thru_TRS_to_USB
+                               then "On" else "Off"),
+                              Selected => True);
+               when USB_Thru_USB_to_TRS =>
+                  Draw_Title ("USB -> TRS Thru", "");
+                  Draw_Value ((if Persistent.Data.USB_MIDI_Thru_USB_to_TRS
+                               then "On" else "Off"),
+                              Selected => True);
             end case;
-
-            Screen.Copy_Bitmap (midi_clock_in_icon.Data,
-                                In_Icon.X, In_Icon.Y,
-                                Invert_Color => Sub = Clock_In);
-
-            if not Persistent.Data.MIDI_Clock_Input then
-               Cross (In_Icon.X, In_Icon.Y, Sub /= Clock_In);
-            end if;
-
-            Screen.Copy_Bitmap (midi_clock_out_icon.Data,
-                                Out_Icon.X, Out_Icon.Y,
-                                Invert_Color => Sub = Clock_Out);
-
-            if not Persistent.Data.MIDI_Clock_Output then
-               Cross (Out_Icon.X, Out_Icon.Y, Sub /= Clock_Out);
-            end if;
 
       end case;
    end Draw;
@@ -137,6 +117,14 @@ package body WNM.GUI.Menu.MIDI_Settings is
                   Persistent.Data.MIDI_Clock_Input := not @;
                when Clock_Out =>
                   Persistent.Data.MIDI_Clock_Output := not @;
+               when USB_Enable =>
+                  Persistent.Data.USB_MIDI_Enabled := not @;
+               when USB_Output =>
+                  Persistent.Data.USB_MIDI_Output := not @;
+               when USB_Thru_TRS_to_USB =>
+                  Persistent.Data.USB_MIDI_Thru_TRS_to_USB := not @;
+               when USB_Thru_USB_to_TRS =>
+                  Persistent.Data.USB_MIDI_Thru_USB_to_TRS := not @;
             end case;
 
          when Down_Press =>
@@ -145,6 +133,14 @@ package body WNM.GUI.Menu.MIDI_Settings is
                   Persistent.Data.MIDI_Clock_Input := not @;
                when Clock_Out =>
                   Persistent.Data.MIDI_Clock_Output := not @;
+               when USB_Enable =>
+                  Persistent.Data.USB_MIDI_Enabled := not @;
+               when USB_Output =>
+                  Persistent.Data.USB_MIDI_Output := not @;
+               when USB_Thru_TRS_to_USB =>
+                  Persistent.Data.USB_MIDI_Thru_TRS_to_USB := not @;
+               when USB_Thru_USB_to_TRS =>
+                  Persistent.Data.USB_MIDI_Thru_USB_to_TRS := not @;
             end case;
 
          when B_Press =>

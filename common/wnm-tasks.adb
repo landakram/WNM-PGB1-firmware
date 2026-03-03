@@ -38,6 +38,7 @@ with WNM.Coproc;
 with WNM.Project_Load_Broadcast;
 with WNM.Power_Control;
 with WNM.Audio_Routing;
+with WNM.MIDI_Routing;
 
 with MIDI;
 
@@ -54,49 +55,23 @@ package body WNM.Tasks is
    --------------------
 
    procedure Handle_MIDI_In is
-      use MIDI;
       Msg : MIDI.Message;
       Success : Boolean;
    begin
       loop
          WNM_HAL.Get_External (Msg, Success);
          exit when not Success;
+         WNM.MIDI_Routing.Handle_Input
+           (Source => WNM.MIDI_Routing.External_TRS,
+            Msg    => Msg);
+      end loop;
 
-         case Msg.Kind is
-            when MIDI.Sys =>
-               case Msg.Cmd is
-                  when MIDI.Start_Song =>
-
-                     if Persistent.Data.MIDI_Clock_Input then
-                        WNM.MIDI_Clock.External_Start;
-                     end if;
-
-                  when MIDI.Stop_Song =>
-                     WNM.MIDI_Clock.External_Stop;
-                  when MIDI.Continue_Song =>
-
-                     if Persistent.Data.MIDI_Clock_Input then
-                        WNM.MIDI_Clock.External_Continue;
-                     end if;
-
-                  when MIDI.Timming_Tick =>
-                     WNM.MIDI_Clock.External_Tick;
-                  when others =>
-                     null;
-               end case;
-
-            when Note_On | Note_Off | Continous_Controller =>
-               if Msg.Chan = 0 then
-                  WNM.Project.Handle_MIDI (Msg);
-               else
-                  Coproc.Push_To_Synth ((Kind     => Coproc.MIDI_Event,
-                                         MIDI_Evt => Msg));
-               end if;
-
-            when others =>
-               null;
-
-         end case;
+      loop
+         WNM_HAL.Get_USB (Msg, Success);
+         exit when not Success;
+         WNM.MIDI_Routing.Handle_Input
+           (Source => WNM.MIDI_Routing.USB,
+            Msg    => Msg);
       end loop;
    end Handle_MIDI_In;
 
@@ -107,6 +82,7 @@ package body WNM.Tasks is
    procedure Sequencer_1khz_Tick is
    begin
       WNM_HAL.Watchdog_Check;
+      WNM_HAL.USB_Poll;
 
       WNM.MIDI_Clock.Update;
       WNM.Short_Term_Sequencer.Update (Clock);

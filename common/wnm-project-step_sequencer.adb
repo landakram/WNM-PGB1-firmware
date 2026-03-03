@@ -35,6 +35,7 @@ with WNM.Song_Start_Broadcast;
 with WNM.Song_Stop_Broadcast;
 with WNM.Song_Continue_Broadcast;
 with WNM.MIDI_Clock;
+with WNM.MIDI_Routing;
 with HAL;                   use HAL;
 
 package body WNM.Project.Step_Sequencer is
@@ -151,7 +152,7 @@ package body WNM.Project.Step_Sequencer is
             end;
 
          when MIDI_Mode =>
-            WNM_HAL.Send_External
+            WNM.MIDI_Routing.Send_Output
               ((MIDI.Note_On, MIDI_Chan (T), Key, Velo));
 
             WNM.Note_Off_Sequencer.Note_Off
@@ -228,7 +229,7 @@ package body WNM.Project.Step_Sequencer is
 
             when MIDI_Mode =>
                Ctrl := G_Project.Tracks (T).CC (Id).Controller;
-               WNM_HAL.Send_External
+               WNM.MIDI_Routing.Send_Output
                  ((MIDI.Continous_Controller,
                   Chan, Ctrl, Val));
 
