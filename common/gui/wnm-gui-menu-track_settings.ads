@@ -65,10 +65,9 @@ private
                   Arp_Notes | Notes_Per_Chord | CC_Ctrl_A .. CC_Label_D,
 
           --  Multi engines
-          when Project.Lead_Mode | Project.Lead2_Mode | Project.Lead3_Mode |
-               Project.Lead4_Mode | Project.Lead5_Mode | Project.Bass_Mode |
-               Project.Bass2_Mode | Project.Bass3_Mode | Project.Bass4_Mode |
-               Project.Bass5_Mode |
+          when Project.Lead_Mode | Project.Bass_Mode | Project.Macro1_Mode |
+               Project.Macro2_Mode | Project.Macro3_Mode |
+               Project.Macro4_Mode |
                Project.Kick_Mode | Project.Snare_Mode | Project.Hihat_Mode |
                Project.Chord_Mode |
                Project.Sample1_Mode | Project.Sample2_Mode =>

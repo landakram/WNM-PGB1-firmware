@@ -98,7 +98,7 @@ with WNM.File_System; use WNM.File_System;
 
 package body WNM.Project.Storage is
 
-   Format_Version : constant := 2;
+   Format_Version : constant := 3;
 
    File_Format_Version : In_UInt := Format_Version;
 
@@ -679,6 +679,13 @@ package body WNM.Project.Storage is
                         else
                            Track.Mode := Default_Mode_For_Track (T_Id);
                         end if;
+                     end;
+                  elsif File_Format_Version = 2 then
+                     declare
+                        Tmp : In_UInt := 0;
+                     begin
+                        Input.Read (Tmp);
+                        Track.Mode := Default_Mode_For_Track (T_Id);
                      end;
                   else
                      Read_Track_Mode (Input, Track.Mode);

@@ -325,8 +325,8 @@ package body WNM.Project is
       use MIDI;
    begin
       case Mode (T) is
-         when Lead_Mode | Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
-              Bass_Mode | Bass2_Mode | Bass3_Mode | Bass4_Mode | Bass5_Mode =>
+         when Lead_Mode | Bass_Mode | Macro1_Mode | Macro2_Mode |
+              Macro3_Mode | Macro4_Mode =>
             return (MIDI_Data'First, Synth.Lead_Engine_Last);
          when Kick_Mode =>
             return (MIDI_Data'First, Synth.Kick_Engine_Last);
@@ -364,8 +364,7 @@ package body WNM.Project is
    begin
       case Mode (Editing_Track) is
          when MIDI_Mode | Kick_Mode | Snare_Mode | Hihat_Mode | Lead_Mode |
-              Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
-              Bass2_Mode | Bass3_Mode | Bass4_Mode | Bass5_Mode |
+              Macro1_Mode | Macro2_Mode | Macro3_Mode | Macro4_Mode |
               Chord_Mode | Bass_Mode | Reverb_Mode |
               Drive_Mode | Bitcrush_Mode =>
             return CC_Value (Step, Id)'Img;
@@ -788,11 +787,10 @@ package body WNM.Project is
                                    return Boolean is
    begin
       if T in 12 .. 16 then
-         return M in MIDI_Mode | Lead2_Mode | Lead3_Mode | Lead4_Mode |
-           Lead5_Mode | Bass2_Mode | Bass3_Mode | Bass4_Mode | Bass5_Mode;
+         return M in MIDI_Mode | Macro1_Mode | Macro2_Mode | Macro3_Mode |
+           Macro4_Mode;
       else
-         return M not in Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
-           Bass2_Mode | Bass3_Mode | Bass4_Mode | Bass5_Mode;
+         return M not in Macro1_Mode | Macro2_Mode | Macro3_Mode | Macro4_Mode;
       end if;
    end Is_Track_Mode_Allowed;
 
@@ -803,13 +801,13 @@ package body WNM.Project is
    begin
       for T in Tracks loop
          case Mode (T) is
-            when Lead2_Mode | Bass2_Mode =>
+            when Macro1_Mode =>
                Active (Lead2_Channel) := True;
-            when Lead3_Mode | Bass3_Mode =>
+            when Macro2_Mode =>
                Active (Lead3_Channel) := True;
-            when Lead4_Mode | Bass4_Mode =>
+            when Macro3_Mode =>
                Active (Lead4_Channel) := True;
-            when Lead5_Mode | Bass5_Mode =>
+            when Macro4_Mode =>
                Active (Lead5_Channel) := True;
             when others =>
                null;
@@ -859,8 +857,7 @@ package body WNM.Project is
       case Mode (T) is
          when MIDI_Mode =>
             return "MIDI" & MIDI_Chan (T)'Img;
-         when Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
-              Bass2_Mode | Bass3_Mode | Bass4_Mode | Bass5_Mode =>
+         when Macro1_Mode | Macro2_Mode | Macro3_Mode | Macro4_Mode =>
             return Img (Mode (T));
          when others =>
             return Img (Mode (T));
@@ -1022,8 +1019,8 @@ package body WNM.Project is
             Utils.Copy_Str (Synth.Chord_Param_Label (Tresses_Id), Result);
             return Result;
 
-         when Lead_Mode | Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
-              Bass_Mode | Bass2_Mode | Bass3_Mode | Bass4_Mode | Bass5_Mode =>
+         when Lead_Mode | Bass_Mode | Macro1_Mode | Macro2_Mode |
+              Macro3_Mode | Macro4_Mode =>
             Utils.Copy_Str (Synth.Lead_Param_Label (Selected_Engine (T),
                                                     Tresses_Id),
                             Result);
@@ -1083,8 +1080,8 @@ package body WNM.Project is
          when Chord_Mode =>
             return Synth.Chord_Param_Short_Label (Tresses_Id);
 
-         when Lead_Mode | Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
-              Bass_Mode | Bass2_Mode | Bass3_Mode | Bass4_Mode | Bass5_Mode =>
+         when Lead_Mode | Bass_Mode | Macro1_Mode | Macro2_Mode |
+              Macro3_Mode | Macro4_Mode =>
             return Synth.Lead_Param_Short_Label (Selected_Engine (T),
                                                  Tresses_Id);
 
@@ -1125,8 +1122,8 @@ package body WNM.Project is
    is
    begin
       case Mode (T) is
-         when Lead_Mode | Lead2_Mode | Lead3_Mode | Lead4_Mode | Lead5_Mode |
-              Bass_Mode | Bass2_Mode | Bass3_Mode | Bass4_Mode | Bass5_Mode =>
+         when Lead_Mode | Bass_Mode | Macro1_Mode | Macro2_Mode |
+              Macro3_Mode | Macro4_Mode =>
             return Synth.Lead_Engine_Img (Selected_Engine (T));
          when Kick_Mode =>
             return Synth.Kick_Engine_Img (Selected_Engine (T));
@@ -2597,13 +2594,13 @@ package body WNM.Project is
         (Default_Track with delta Mode => Drive_Mode);
       Tracks (Bitcrush_Track) := Default_Bitcrush_Track;
       Tracks (12)             :=
-        (Default_Track with delta Mode => MIDI_Mode);
+        (Default_Track with delta Mode => Macro1_Mode);
       Tracks (13)             :=
-        (Default_Track with delta Mode => MIDI_Mode);
+        (Default_Track with delta Mode => Macro2_Mode);
       Tracks (14)             :=
-        (Default_Track with delta Mode => MIDI_Mode);
+        (Default_Track with delta Mode => Macro3_Mode);
       Tracks (15)             :=
-        (Default_Track with delta Mode => MIDI_Mode);
+        (Default_Track with delta Mode => Macro4_Mode);
       Tracks (16)             :=
         (Default_Track with delta Mode => MIDI_Mode);
    end Set_Track_Defaults;
