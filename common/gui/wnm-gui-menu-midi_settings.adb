@@ -21,6 +21,7 @@
 
 with WNM.GUI.Menu.Drawing; use WNM.GUI.Menu.Drawing;
 with WNM.Persistent;
+with WNM.Project;
 
 package body WNM.GUI.Menu.MIDI_Settings is
 
@@ -41,7 +42,29 @@ package body WNM.GUI.Menu.MIDI_Settings is
 
    function To_Top (S : Sub_Settings) return Top_Settings
    is (case S is
-          when others => MIDI_Misc);
+          when Clock_In | Clock_Out => MIDI_Clock,
+          when others               => USB_MIDI);
+
+   function On_Off (Value : Boolean) return String
+   is (if Value then "On" else "Off");
+
+   procedure Toggle_Current (This : in out Instance) is
+   begin
+      case This.Current_Setting is
+         when Clock_In =>
+            Persistent.Data.MIDI_Clock_Input := not @;
+         when Clock_Out =>
+            Persistent.Data.MIDI_Clock_Output := not @;
+         when USB_Enable =>
+            Persistent.Data.USB_MIDI_Enabled := not @;
+         when USB_Output =>
+            Persistent.Data.USB_MIDI_Output := not @;
+         when USB_Thru_TRS_to_USB =>
+            Persistent.Data.USB_MIDI_Thru_TRS_to_USB := not @;
+         when USB_Thru_USB_to_TRS =>
+            Persistent.Data.USB_MIDI_Thru_USB_to_TRS := not @;
+      end case;
+   end Toggle_Current;
 
    ----------
    -- Draw --
@@ -59,39 +82,44 @@ package body WNM.GUI.Menu.MIDI_Settings is
          Index => Top_Settings'Pos (To_Top (This.Current_Setting)));
 
       case Top is
-         when MIDI_Misc =>
-            case This.Current_Setting is
-               when Clock_In =>
-                  Draw_Title ("MIDI Clock Input", "");
-                  Draw_Value ((if Persistent.Data.MIDI_Clock_Input then "On"
-                               else "Off"),
-                              Selected => True);
-               when Clock_Out =>
-                  Draw_Title ("MIDI Clock Output", "");
-                  Draw_Value ((if Persistent.Data.MIDI_Clock_Output then "On"
-                               else "Off"),
-                              Selected => True);
-               when USB_Enable =>
-                  Draw_Title ("USB MIDI", "");
-                  Draw_Value ((if Persistent.Data.USB_MIDI_Enabled then "On"
-                               else "Off"),
-                              Selected => True);
-               when USB_Output =>
-                  Draw_Title ("USB MIDI Output", "");
-                  Draw_Value ((if Persistent.Data.USB_MIDI_Output then "On"
-                               else "Off"),
-                              Selected => True);
-               when USB_Thru_TRS_to_USB =>
-                  Draw_Title ("TRS -> USB Thru", "");
-                  Draw_Value ((if Persistent.Data.USB_MIDI_Thru_TRS_to_USB
-                               then "On" else "Off"),
-                              Selected => True);
-               when USB_Thru_USB_to_TRS =>
-                  Draw_Title ("USB -> TRS Thru", "");
-                  Draw_Value ((if Persistent.Data.USB_MIDI_Thru_USB_to_TRS
-                               then "On" else "Off"),
-                              Selected => True);
-            end case;
+         when MIDI_Clock =>
+            Draw_Title ("MIDI Clock", "");
+
+            Draw_Volume (Id       => WNM.Project.A,
+                         Value    => 0,
+                         Label    => On_Off (Persistent.Data.MIDI_Clock_Input),
+                         Selected => Sub = Clock_In);
+
+            Draw_Volume (Id       => WNM.Project.B,
+                         Value    => 0,
+                         Label    =>
+                           On_Off (Persistent.Data.MIDI_Clock_Output),
+                         Selected => Sub = Clock_Out);
+
+         when USB_MIDI =>
+            Draw_Title ("USB MIDI", "");
+
+            Draw_Volume (Id       => WNM.Project.A,
+                         Value    => 0,
+                         Label    => On_Off (Persistent.Data.USB_MIDI_Enabled),
+                         Selected => Sub = USB_Enable);
+
+            Draw_Volume (Id       => WNM.Project.B,
+                         Value    => 0,
+                         Label    => On_Off (Persistent.Data.USB_MIDI_Output),
+                         Selected => Sub = USB_Output);
+
+            Draw_Volume
+              (Id       => WNM.Project.C,
+               Value    => 0,
+               Label    => On_Off (Persistent.Data.USB_MIDI_Thru_TRS_to_USB),
+               Selected => Sub = USB_Thru_TRS_to_USB);
+
+            Draw_Volume
+              (Id       => WNM.Project.D,
+               Value    => 0,
+               Label    => On_Off (Persistent.Data.USB_MIDI_Thru_USB_to_TRS),
+               Selected => Sub = USB_Thru_USB_to_TRS);
 
       end case;
    end Draw;
@@ -112,36 +140,10 @@ package body WNM.GUI.Menu.MIDI_Settings is
             Next (This.Current_Setting);
 
          when Up_Press =>
-            case This.Current_Setting is
-               when Clock_In =>
-                  Persistent.Data.MIDI_Clock_Input := not @;
-               when Clock_Out =>
-                  Persistent.Data.MIDI_Clock_Output := not @;
-               when USB_Enable =>
-                  Persistent.Data.USB_MIDI_Enabled := not @;
-               when USB_Output =>
-                  Persistent.Data.USB_MIDI_Output := not @;
-               when USB_Thru_TRS_to_USB =>
-                  Persistent.Data.USB_MIDI_Thru_TRS_to_USB := not @;
-               when USB_Thru_USB_to_TRS =>
-                  Persistent.Data.USB_MIDI_Thru_USB_to_TRS := not @;
-            end case;
+            Toggle_Current (This);
 
          when Down_Press =>
-            case This.Current_Setting is
-               when Clock_In =>
-                  Persistent.Data.MIDI_Clock_Input := not @;
-               when Clock_Out =>
-                  Persistent.Data.MIDI_Clock_Output := not @;
-               when USB_Enable =>
-                  Persistent.Data.USB_MIDI_Enabled := not @;
-               when USB_Output =>
-                  Persistent.Data.USB_MIDI_Output := not @;
-               when USB_Thru_TRS_to_USB =>
-                  Persistent.Data.USB_MIDI_Thru_TRS_to_USB := not @;
-               when USB_Thru_USB_to_TRS =>
-                  Persistent.Data.USB_MIDI_Thru_USB_to_TRS := not @;
-            end case;
+            Toggle_Current (This);
 
          when B_Press =>
             Menu.Pop (Exit_Value => Failure);
